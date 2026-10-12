@@ -2,7 +2,7 @@ import { Condition, ModalityInput, ModalityType, ModelPrediction } from '@/types
 import { generateSeed, createSeededRandom } from './seededRandom';
 import { scenarios } from '../data/scenarios';
 
-const MODELS: Record<ModalityType, { id: string; name: string; targets: Condition[] }> = {
+export const MODELS: Record<ModalityType, { id: string; name: string; targets: Condition[] }> = {
   bloodSmear: { id: 'model-smear-v1', name: 'Blood Smear Analysis Model', targets: ['malaria', 'leukemia'] },
   chestXray: { id: 'model-cxr-v2', name: 'CXR Pathology Model', targets: ['tuberculosis'] },
   ecg: { id: 'model-ecg-v1', name: 'ECG Biomarker Model', targets: ['hypertension'] },

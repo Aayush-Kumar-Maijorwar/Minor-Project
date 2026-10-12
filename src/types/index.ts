@@ -83,6 +83,8 @@ export interface FusionResult {
   dominantCondition?: Condition;
   modalitiesUsed: ModalityType[];
   modalitiesExcluded: ModalityType[];
+  assessedConditions: Condition[];
+  notAssessedConditions: Condition[];
   fusionVersion: string;
   simulated: true;
   note: string;
