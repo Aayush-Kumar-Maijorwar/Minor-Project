@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePatients, useAnalyses } from '@/features/hooks';
 import { inferenceService } from '@/services/inference';
-import { ModalityInput, ModalityType, Analysis } from '@/types';
+import { ModalityInput, ModalityType, Analysis, Condition } from '@/types';
 import { Progress } from '@/components/ui/progress';
+import { UPLOAD_HINTS } from '@/mock/engine/flags';
+
+const ALL_CONDITIONS: Condition[] = ['diabetes', 'hypertension', 'malaria', 'leukemia', 'tuberculosis'];
 
 const STEPS = [
   'Patient Selection',
@@ -34,9 +37,11 @@ export default function NewAnalysis() {
   const [isRunning, setIsRunning] = useState(false);
   const [progressStage, setProgressStage] = useState('');
   const [analysisResult, setAnalysisResult] = useState<Analysis | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleNext = async () => {
     if (step === 1) { // Going to processing
+      setError(null);
       setIsRunning(true);
       setStep(2);
       try {
@@ -48,6 +53,8 @@ export default function NewAnalysis() {
         setTimeout(() => setStep(3), 1000); // move to fusion visualization after a delay
       } catch (e) {
         console.error(e);
+        setError(e instanceof Error ? e.message : 'Analysis failed. Please try again.');
+        setStep(1);
       } finally {
         setIsRunning(false);
       }
@@ -103,13 +110,18 @@ export default function NewAnalysis() {
 
           {step === 1 && selectedPatient && (
             <div className="space-y-6">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
               <div className="bg-slate-50 p-4 rounded-md flex justify-between items-center">
                 <div>
                   <div className="font-semibold">{selectedPatient.name}</div>
                   <div className="text-sm text-slate-500">Select available modalities for this analysis.</div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-4">
                 {Object.keys(inputs).map(k => {
                   const type = k as ModalityType;
@@ -145,9 +157,16 @@ export default function NewAnalysis() {
               <p className="text-slate-600 max-w-lg mx-auto">
                 Models ran independently. Results have been fused using {analysisResult.fusion.modalitiesUsed.length} available modalities.
               </p>
-              <div className="flex justify-center space-x-4 pt-6">
-                <Badge variant="outline" className="text-sm py-1 px-3">Diabetes: {analysisResult.fusion.perCondition.find(c => c.condition === 'diabetes')?.fusedScore.toFixed(2) || 'N/A'}</Badge>
-                <Badge variant="outline" className="text-sm py-1 px-3">Hypertension: {analysisResult.fusion.perCondition.find(c => c.condition === 'hypertension')?.fusedScore.toFixed(2) || 'N/A'}</Badge>
+              <div className="flex flex-wrap justify-center gap-3 pt-6">
+                {ALL_CONDITIONS.map(cond => {
+                  const result = analysisResult.fusion.perCondition.find(c => c.condition === cond);
+                  const label = !result || result.riskLevel === 'not_assessed'
+                    ? `${cond}: Not assessed`
+                    : `${cond}: ${result.riskLevel} (${result.fusedScore.toFixed(2)})`;
+                  return (
+                    <Badge key={cond} variant="outline" className="text-sm py-1 px-3 capitalize">{label}</Badge>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -159,10 +178,23 @@ export default function NewAnalysis() {
                 <div className="text-4xl font-bold mb-4 capitalize">
                   {analysisResult.fusion.overallRisk.replace('_', ' ')}
                 </div>
+                <div className="text-sm text-slate-500 mb-4">
+                  {analysisResult.fusion.assessedConditions.length} of {ALL_CONDITIONS.length} conditions assessed
+                </div>
                 {analysisResult.flags.length > 0 && (
                   <div className="inline-flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-sm font-medium">
                     <AlertTriangle className="w-4 h-4" />
                     <span>{analysisResult.flags.length} Flags Generated</span>
+                  </div>
+                )}
+                {analysisResult.fusion.notAssessedConditions.length > 0 && (
+                  <div className="mt-4 text-sm text-slate-500 text-left max-w-md mx-auto">
+                    <div className="font-medium text-slate-600 mb-1">To assess the remaining conditions, upload:</div>
+                    <ul className="list-disc list-inside space-y-1">
+                      {analysisResult.fusion.notAssessedConditions.map(c => (
+                        <li key={c} className="capitalize">{c}: {UPLOAD_HINTS[c]}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>

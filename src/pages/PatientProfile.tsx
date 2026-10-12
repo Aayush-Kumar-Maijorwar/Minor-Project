@@ -30,10 +30,11 @@ export default function PatientProfile() {
             <h1 className="text-2xl font-bold text-slate-900">{patient.name}</h1>
             <Badge variant="outline">Synthetic</Badge>
             <Badge variant={
-              patient.currentRisk === 'high' ? 'destructive' : 
-              patient.currentRisk === 'review_required' ? 'warning' : 'secondary'
+              patient.currentRisk === 'high' ? 'destructive' :
+              patient.currentRisk === 'review_required' ? 'warning' :
+              patient.currentRisk === 'incomplete_data' ? 'outline' : 'secondary'
             }>
-              Risk: {patient.currentRisk?.toUpperCase()}
+              Risk: {patient.currentRisk?.replace('_', ' ').toUpperCase()}
             </Badge>
           </div>
           <p className="text-slate-500 mt-1">{patient.mrn} • {patient.age}y • {patient.sex} • {patient.availableModalities.length}/5 Modalities Available</p>
@@ -60,7 +61,10 @@ export default function PatientProfile() {
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Current Risk Assessment</CardTitle>
-                <CardDescription>Based on latest late-fusion analysis</CardDescription>
+                <CardDescription>
+                  Based on latest late-fusion analysis
+                  {latestAnalysis && ` — ${latestAnalysis.fusion.assessedConditions.length} of 5 conditions assessed`}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {latestAnalysis ? (
