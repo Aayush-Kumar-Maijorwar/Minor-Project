@@ -6,6 +6,8 @@ import {
 import { getMockPatient, mockPatients } from './data/mockPatients';
 import { simulateModalityPredictions } from './engine/modalityModelSim';
 import { simulateLateFusion } from './engine/lateFusionSim';
+import { buildFlags } from './engine/flags';
+import { buildUncertainty } from './engine/uncertainty';
 
 // Helper to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -86,18 +88,7 @@ export class MockInferenceService implements InferenceService {
     opts?.onProgress?.('explainability', 'Generating explanations and uncertainty bounds');
     await sleep(500);
 
-    const uncertainty: UncertaintyResult = {
-      confidence: 0.85,
-      uncertaintyLevel: activeModalities.length < 3 ? 'moderate' : 'low',
-      reliability: activeModalities.length < 2 ? 'limited' : 'adequate',
-      dataCompleteness: {
-        available: activeModalities.length,
-        total: 5,
-        missing: (['bloodSmear', 'chestXray', 'ecg', 'clinical', 'lab'] as ModalityType[]).filter(m => !activeModalities.includes(m))
-      },
-      modelStatus: 'Demo Mode Simulation',
-      messages: ['Confidence reflects model agreement in Demo Mode and is not medical certainty.', 'Unavailable modalities were excluded from this fusion run.']
-    };
+    const uncertainty: UncertaintyResult = buildUncertainty(predictions, fusion);
 
     const explainability: ExplainabilityResult[] = predictions.filter(p => p.status === 'ok').map(p => {
       let kind: 'feature_importance' | 'heatmap' | 'ecg_segments' = 'feature_importance';
@@ -116,29 +107,7 @@ export class MockInferenceService implements InferenceService {
     });
 
     const analysisId = fusion.analysisId;
-    const flags: RiskFlag[] = [];
-    if (fusion.overallRisk === 'high' || fusion.overallRisk === 'review_required') {
-      flags.push({
-        id: `flag-${generateId()}`,
-        patientId,
-        analysisId,
-        severity: 'review_required',
-        reason: 'High risk condition detected by fusion model. Clinical review required.',
-        createdAt: new Date().toISOString(),
-        status: 'open'
-      });
-    }
-    if (uncertainty.dataCompleteness.missing.length > 2) {
-      flags.push({
-        id: `flag-${generateId()}`,
-        patientId,
-        analysisId,
-        severity: 'incomplete_data',
-        reason: 'Multiple modalities missing. Assessment may be unreliable.',
-        createdAt: new Date().toISOString(),
-        status: 'open'
-      });
-    }
+    const flags: RiskFlag[] = buildFlags(analysisId, patientId, fusion);
 
     const analysis: Analysis = {
       id: analysisId,
