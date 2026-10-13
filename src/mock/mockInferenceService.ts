@@ -8,6 +8,7 @@ import { simulateModalityPredictions } from './engine/modalityModelSim';
 import { simulateLateFusion } from './engine/lateFusionSim';
 import { buildFlags } from './engine/flags';
 import { buildUncertainty } from './engine/uncertainty';
+import { buildNarrative } from './engine/narrative';
 
 // Helper to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -16,7 +17,8 @@ const MOCK_MODELS: ModelMetadata[] = [
   { id: 'model-clin-v1', name: 'Clinical Data Model', condition: 'all', inputModality: 'clinical', status: 'trained_baseline', version: 'v1.0.0', lastUpdated: '2026-09-15', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-lab-v1', name: 'Laboratory Data Model', condition: 'diabetes', inputModality: 'lab', status: 'trained_baseline', version: 'v1.0.0', lastUpdated: '2026-09-15', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-ecg-v1', name: 'ECG Biomarker Model', condition: 'hypertension', inputModality: 'ecg', status: 'tuning', version: 'v0.9.0-beta', lastUpdated: '2026-10-01', explainabilitySupport: true, integrationStatus: 'mock' },
-  { id: 'model-smear-v1', name: 'Blood Smear Analysis', condition: 'all', inputModality: 'bloodSmear', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
+  { id: 'model-smear-cell-v1', name: 'Blood Smear Cell Analysis', condition: 'malaria', inputModality: 'bloodSmearCell', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
+  { id: 'model-smear-field-v1', name: 'Blood Smear Field Analysis', condition: 'leukemia', inputModality: 'bloodSmearField', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-cxr-v2', name: 'CXR Pathology Model', condition: 'tuberculosis', inputModality: 'chestXray', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' }
 ];
 
@@ -78,7 +80,7 @@ export class MockInferenceService implements InferenceService {
     
     opts?.onProgress?.('predicting', 'Running modality models');
     await sleep(600);
-    const predictions = simulateModalityPredictions(patientId, preprocessedInputs, patient.scenarioId);
+    const predictions = simulateModalityPredictions(patientId, preprocessedInputs, patient.scenarioId || 'healthy');
     
     opts?.onProgress?.('fusing', 'Executing late fusion');
     await sleep(400);
@@ -92,7 +94,7 @@ export class MockInferenceService implements InferenceService {
 
     const explainability: ExplainabilityResult[] = predictions.filter(p => p.status === 'ok').map(p => {
       let kind: 'feature_importance' | 'heatmap' | 'ecg_segments' = 'feature_importance';
-      if (p.modality === 'bloodSmear' || p.modality === 'chestXray') kind = 'heatmap';
+      if (p.modality === 'bloodSmearCell' || p.modality === 'bloodSmearField' || p.modality === 'chestXray') kind = 'heatmap';
       if (p.modality === 'ecg') kind = 'ecg_segments';
 
       return {
@@ -108,6 +110,7 @@ export class MockInferenceService implements InferenceService {
 
     const analysisId = fusion.analysisId;
     const flags: RiskFlag[] = buildFlags(analysisId, patientId, fusion);
+    const narrative = buildNarrative(fusion);
 
     const analysis: Analysis = {
       id: analysisId,
@@ -119,7 +122,8 @@ export class MockInferenceService implements InferenceService {
       explainability,
       uncertainty,
       flags,
-      versions: { models: { 'model-clin-v1': '1.0' }, fusion: 'v2.0' }
+      versions: { models: { 'model-clin-v1': '1.0' }, fusion: 'v2.0' },
+      narrative
     };
 
     globalAnalyses.push(analysis);

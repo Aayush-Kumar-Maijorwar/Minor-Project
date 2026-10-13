@@ -6,7 +6,7 @@ import { simulateLateFusion, DEMO_WEIGHTS } from '../lateFusionSim';
 import { buildFlags } from '../flags';
 import { scenarios } from '../../data/scenarios';
 
-const ALL_TYPES: ModalityType[] = ['bloodSmear', 'chestXray', 'ecg', 'clinical', 'lab'];
+const ALL_TYPES: ModalityType[] = ['bloodSmearCell', 'bloodSmearField', 'chestXray', 'ecg', 'clinical', 'lab'];
 const ALL_CONDITIONS: Condition[] = ['diabetes', 'hypertension', 'malaria', 'leukemia', 'tuberculosis'];
 
 function buildInputs(available: ModalityType[]): ModalityInput[] {

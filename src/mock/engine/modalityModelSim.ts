@@ -3,7 +3,8 @@ import { generateSeed, createSeededRandom } from './seededRandom';
 import { scenarios } from '../data/scenarios';
 
 export const MODELS: Record<ModalityType, { id: string; name: string; targets: Condition[] }> = {
-  bloodSmear: { id: 'model-smear-v1', name: 'Blood Smear Analysis Model', targets: ['malaria', 'leukemia'] },
+  bloodSmearCell: { id: 'model-smear-cell-v1', name: 'Blood Smear Cell Analysis Model', targets: ['malaria'] },
+  bloodSmearField: { id: 'model-smear-field-v1', name: 'Blood Smear Field Analysis Model', targets: ['leukemia'] },
   chestXray: { id: 'model-cxr-v2', name: 'CXR Pathology Model', targets: ['tuberculosis'] },
   ecg: { id: 'model-ecg-v1', name: 'ECG Biomarker Model', targets: ['hypertension'] },
   clinical: { id: 'model-clin-v1', name: 'Clinical Data Model', targets: ['diabetes', 'hypertension'] },

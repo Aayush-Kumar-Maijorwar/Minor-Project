@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Activity, AlertTriangle, FileText, Share2, History, AlertCircle } from 'lucide-react';
+import { ModalityType } from '@/types';
+
+const ALL_MODALITIES: ModalityType[] = ['clinical', 'lab', 'ecg', 'bloodSmearCell', 'bloodSmearField', 'chestXray'];
 
 export default function PatientProfile() {
   const { id } = useParams();
@@ -37,7 +40,7 @@ export default function PatientProfile() {
               Risk: {patient.currentRisk?.replace('_', ' ').toUpperCase()}
             </Badge>
           </div>
-          <p className="text-slate-500 mt-1">{patient.mrn} • {patient.age}y • {patient.sex} • {patient.availableModalities.length}/5 Modalities Available</p>
+          <p className="text-slate-500 mt-1">{patient.mrn} • {patient.age}y • {patient.sex} • {patient.availableModalities.length}/{ALL_MODALITIES.length} Modalities Available</p>
         </div>
         <div className="flex space-x-3">
           <Button variant="outline" onClick={() => navigate('/analysis/new')}>Re-run with different modalities</Button>
@@ -97,8 +100,8 @@ export default function PatientProfile() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {['clinical', 'lab', 'ecg', 'bloodSmear', 'chestXray'].map(mod => {
-                    const isAvail = patient.availableModalities.includes(mod as any);
+                  {ALL_MODALITIES.map(mod => {
+                    const isAvail = patient.availableModalities.includes(mod);
                     return (
                       <li key={mod} className="flex items-center justify-between text-sm">
                         <span className="capitalize">{mod.replace(/([A-Z])/g, ' $1').trim()}</span>

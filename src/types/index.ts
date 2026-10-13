@@ -1,4 +1,4 @@
-export type ModalityType = 'bloodSmear' | 'chestXray' | 'ecg' | 'clinical' | 'lab';
+export type ModalityType = 'bloodSmearCell' | 'bloodSmearField' | 'chestXray' | 'ecg' | 'clinical' | 'lab';
 export type ModalityStatus = 'available' | 'missing' | 'not_required' | 'pending';
 export type Condition = 'diabetes' | 'hypertension' | 'malaria' | 'leukemia' | 'tuberculosis';
 
@@ -8,7 +8,7 @@ export interface Patient {
   name: string;
   age: number;
   sex: 'male' | 'female' | 'other';
-  scenarioId: string;
+  scenarioId?: string;
   status: 'active' | 'inactive';
   lastAnalysisAt?: string;
   currentRisk?: 'low' | 'moderate' | 'high' | 'incomplete_data' | 'review_required';
@@ -86,7 +86,7 @@ export interface FusionResult {
   assessedConditions: Condition[];
   notAssessedConditions: Condition[];
   fusionVersion: string;
-  simulated: true;
+  simulated: boolean;
   note: string;
 }
 
@@ -116,7 +116,7 @@ export interface ExplainabilityResult {
   features?: ExplainabilityFeature[];
   heatmap?: { grid: number[][]; regions: ExplainabilityRegion[] };
   segments?: ExplainabilitySegment[];
-  simulated: true;
+  simulated: boolean;
 }
 
 export interface UncertaintyResult {
@@ -142,6 +142,22 @@ export interface RiskFlag {
   reviewAction?: string;
 }
 
+export interface NarrativeCondition {
+  condition: Condition;
+  level: string;
+  line: string;
+}
+
+export interface Narrative {
+  headline: string;
+  priority: 'review' | 'routine' | 'incomplete';
+  conditions: NarrativeCondition[];
+  notAssessed: string;
+  disclaimer: string;
+  generatedBy: 'template' | 'llm';
+  llmText?: string;
+}
+
 export interface Analysis {
   id: string;
   patientId: string;
@@ -153,6 +169,7 @@ export interface Analysis {
   uncertainty: UncertaintyResult;
   flags: RiskFlag[];
   versions: { models: Record<string, string>; fusion: string };
+  narrative?: Narrative;
   doctorReview?: { status: 'pending' | 'reviewed'; note?: string; reviewedAt?: string };
 }
 
@@ -176,5 +193,6 @@ export interface ModelMetadata {
   lastUpdated: string;
   explainabilitySupport: boolean;
   integrationStatus: 'mock' | 'ready_for_integration' | 'integrated';
-  metrics?: { label: string; value: string; isPlaceholder: true }[];
+  metrics?: { label: string; value: string; isPlaceholder: boolean }[];
+  plots?: string[];
 }

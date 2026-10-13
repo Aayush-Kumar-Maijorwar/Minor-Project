@@ -14,7 +14,8 @@ const CONDITION_LABELS: Record<Condition, string> = {
 };
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
-  bloodSmear: 'Blood Smear',
+  bloodSmearCell: 'Blood Smear (Cell)',
+  bloodSmearField: 'Blood Smear (Field)',
   chestXray: 'Chest X-ray',
   ecg: 'ECG',
   clinical: 'Clin',
@@ -59,7 +60,7 @@ export default function FusionAnalysis() {
 
                 {/* Modality Models (Left) */}
                 <g transform="translate(50, 40)">
-                  {['Blood Smear', 'Chest X-ray', 'ECG', 'Clinical', 'Lab Data'].map((m, i) => (
+                  {['Blood Smear (Cell/Field)', 'Chest X-ray', 'ECG', 'Clinical', 'Lab Data'].map((m, i) => (
                     <g key={m} transform={`translate(0, ${i * 70})`}>
                       <rect width="100" height="40" rx="4" fill="#f8fafc" stroke="#94a3b8" />
                       <text x="50" y="25" textAnchor="middle" fontSize="12" fill="#334155">{m}</text>

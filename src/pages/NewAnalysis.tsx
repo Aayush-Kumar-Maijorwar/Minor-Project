@@ -31,7 +31,8 @@ export default function NewAnalysis() {
     lab: { type: 'lab', status: 'available', source: 'synthetic' },
     ecg: { type: 'ecg', status: 'missing', source: 'synthetic' },
     chestXray: { type: 'chestXray', status: 'missing', source: 'synthetic' },
-    bloodSmear: { type: 'bloodSmear', status: 'missing', source: 'synthetic' },
+    bloodSmearCell: { type: 'bloodSmearCell', status: 'missing', source: 'synthetic' },
+    bloodSmearField: { type: 'bloodSmearField', status: 'missing', source: 'synthetic' },
   });
   
   const [isRunning, setIsRunning] = useState(false);
