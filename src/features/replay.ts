@@ -24,3 +24,10 @@ export async function loadReplay(demoCaseId: string): Promise<ReplayRecord | nul
 export function isNetworkError(e: unknown): boolean {
   return e instanceof Error && /offline|unreachable|failed to fetch|networkerror/i.test(e.message);
 }
+
+/** The replay fallback only ever applies to a loaded demo case that failed with a
+ * network-level error - hand-typed input always shows the real error, and a demo
+ * case that failed for a real reason (422/404/500) is never silently swapped out. */
+export function shouldAttemptReplay(hasDemoCase: boolean, error: unknown): boolean {
+  return hasDemoCase && isNetworkError(error);
+}

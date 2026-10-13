@@ -113,7 +113,9 @@ export default function Dashboard() {
                 </div>
               ))}
               <div className="pt-4 mt-2 border-t border-slate-200 text-xs text-slate-400 text-center">
-                All models are currently running in deterministic Demo Mode.
+                {import.meta.env.VITE_INFERENCE_MODE === 'mock'
+                  ? 'All models are currently running in deterministic Demo Mode.'
+                  : 'Status reflects the connected backend.'}
               </div>
             </div>
           </CardContent>

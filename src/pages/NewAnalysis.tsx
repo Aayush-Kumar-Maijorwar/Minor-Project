@@ -14,7 +14,7 @@ import {
 } from '@/features/analysisForm';
 import { ClinicalValues, LabValues, AnalysisFiles } from '@/services/inference/InferenceService';
 import { fetchDemoCases, loadDemoCaseFiles, DemoCase } from '@/features/demoCases';
-import { loadReplay, isNetworkError } from '@/features/replay';
+import { loadReplay, shouldAttemptReplay } from '@/features/replay';
 import { LabReportCard } from '@/components/LabReportCard';
 import { z } from 'zod';
 
@@ -191,8 +191,8 @@ export default function NewAnalysis() {
       });
       navigate(`/analyses/${result.id}`, { state: { analysis: result, files } });
     } catch (e) {
-      if (selectedDemoCase && isNetworkError(e)) {
-        const replay = await loadReplay(selectedDemoCase.id);
+      if (shouldAttemptReplay(!!selectedDemoCase, e)) {
+        const replay = await loadReplay(selectedDemoCase!.id);
         if (replay) {
           navigate(`/analyses/${replay.analysis.id}`, { state: { analysis: replay.analysis, replay, files } });
           return;
@@ -426,7 +426,7 @@ export default function NewAnalysis() {
             Back
           </Button>
           {step === 0 && (
-            <Button onClick={() => setStep(1)} disabled={!selectedPatientId}>Next</Button>
+            <Button onClick={() => setStep(1)} disabled={!selectedPatientId && !selectedDemoCase}>Next</Button>
           )}
           {step === 1 && (
             <Button onClick={handleSubmit(onSubmit)} disabled={isRunning}>Run Analysis</Button>
