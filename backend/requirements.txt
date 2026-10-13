@@ -11,6 +11,7 @@ httpx
 python-dotenv
 pytest
 xgboost
+matplotlib  # only used by training/*.py, pulled in here so tests/test_training_contract.py can run them
 
 # torch is NOT pinned here - install separately (CPU wheels):
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu

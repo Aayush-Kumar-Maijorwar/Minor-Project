@@ -11,7 +11,7 @@ Kaggle usage (GPU on, Internet on, dataset attached via "Add Data"):
     !python train_image.py --disease leukemia
 First run a quick check:   !python train_image.py --disease tb --smoke
 """
-import argparse, copy, glob, json, os, random, re, time
+import argparse, copy, glob, json, os, random, re, shutil, time
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -332,7 +332,17 @@ def main():
     plot_roc(results, curves, os.path.join(out, "roc.png"))
     plot_comparison(results, best, os.path.join(out, "comparison.png"), a.target_sens)
     plot_cm(b["tuned"], os.path.join(out, "confusion_best.png"), f"{best} @ thr {b['tuned']['threshold']:.2f}")
-    print(f"\nSaved to {out}: comparison.json/csv, {a.disease}_best.pt, roc.png, comparison.png, confusion_best.png")
+
+    # A few labelled example images per class, for the Models page and the demo-data importer.
+    samples_dir = os.path.join(out, "samples")
+    os.makedirs(samples_dir, exist_ok=True)
+    for cls_label, cls_name in ((0, "negative"), (1, "positive")):
+        subset = d_te[d_te.label == cls_label].head(3)
+        for i, row in enumerate(subset.itertuples()):
+            ext = os.path.splitext(row.path)[1] or ".png"
+            shutil.copy(row.path, os.path.join(samples_dir, f"{cls_name}_{i}{ext}"))
+
+    print(f"\nSaved to {out}: comparison.json/csv, {a.disease}_best.pt, roc.png, comparison.png, confusion_best.png, samples/")
 
 if __name__ == "__main__":
     main()

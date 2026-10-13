@@ -1,11 +1,16 @@
 """
 MedFusion ECG-model trainer (single-heartbeat, cardiac-abnormality screen)
 
-Dataset: Kaggle "ECG Heartbeat Categorization Dataset" (shayanfazeli/heartbeat), MIT-BIH
-arrhythmia CSVs (mitbih_train.csv / mitbih_test.csv) - each row is ONE heartbeat resampled
-to 187 samples, last column is the MIT-BIH class (0 = normal, 1-4 = abnormal beats). We
-collapse this to binary: 0 = normal, 1 = any abnormal beat, since this model is used only
-as a supporting cardiac-abnormality signal for hypertension, not a diagnosis of its own.
+Dataset: Kaggle "ECG Heartbeat Categorization Dataset" (shayanfazeli/heartbeat). That
+bundle ships two file pairs for the same 187-sample-per-row beat shape - whichever is
+present is used (MIT-BIH preferred if both are):
+  - mitbih_train.csv / mitbih_test.csv - MIT-BIH arrhythmia beats, last column is the
+    MIT-BIH class (0 = normal, 1-4 = abnormal).
+  - ptbdb_normal.csv / ptbdb_abnormal.csv - PTB diagnostic database beats, already
+    split by file into normal/abnormal, last column is 0/1 accordingly.
+We collapse either to binary: 0 = normal, 1 = any abnormal beat, since this model is
+used only as a supporting cardiac-abnormality signal for hypertension, not a
+diagnosis of its own.
 
 Trains several small 1D architectures, compares them on a held-out test set, picks the best
 by VALIDATION data, tunes the decision threshold for high sensitivity, and saves weights +
@@ -15,7 +20,7 @@ Kaggle usage (GPU on, Internet on, dataset attached via "Add Data"):
     !python train_ecg.py
 First run a quick check:   !python train_ecg.py --smoke
 """
-import argparse, copy, glob, json, os, random, time
+import argparse, copy, glob, json, os, random, shutil, time
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -33,27 +38,31 @@ INPUT_LEN = 187
 # ---------------------------------------------------------------------------
 # Data discovery + splitting
 # ---------------------------------------------------------------------------
-def find_csvs(root=None):
-    if root:
-        train_csv = os.path.join(root, "mitbih_train.csv")
-        test_csv = os.path.join(root, "mitbih_test.csv")
-        if os.path.exists(train_csv) and os.path.exists(test_csv):
-            return train_csv, test_csv
-        raise SystemExit(f"mitbih_train.csv / mitbih_test.csv not found under {root}")
-    hits = glob.glob("/kaggle/input/**/mitbih_train.csv", recursive=True)
-    if not hits:
-        raise SystemExit("mitbih_train.csv not found under /kaggle/input. Attach the dataset or pass --root.")
-    train_csv = hits[0]
-    test_csv = os.path.join(os.path.dirname(train_csv), "mitbih_test.csv")
-    if not os.path.exists(test_csv):
-        raise SystemExit(f"mitbih_test.csv not found next to {train_csv}")
-    return train_csv, test_csv
+# (filename_a, filename_b): both files share the same INPUT_LEN-samples-plus-label row shape,
+# so whichever pair is found is simply concatenated. MIT-BIH preferred when both are present.
+CSV_FILE_PAIRS = [("mitbih_train.csv", "mitbih_test.csv"), ("ptbdb_normal.csv", "ptbdb_abnormal.csv")]
 
-def load_beats(train_csv, test_csv):
-    """Each row: INPUT_LEN signal samples + a trailing MIT-BIH class column. Binarize: 0=normal, else abnormal."""
-    df_tr = pd.read_csv(train_csv, header=None)
-    df_te = pd.read_csv(test_csv, header=None)
-    df = pd.concat([df_tr, df_te], ignore_index=True)  # why: we do our own 70/15/15 split for an honest held-out test
+def find_csvs(root=None) -> list[str]:
+    if root:
+        for a, b in CSV_FILE_PAIRS:
+            pa, pb = os.path.join(root, a), os.path.join(root, b)
+            if os.path.exists(pa) and os.path.exists(pb):
+                return [pa, pb]
+        names = " or ".join(f"{a}/{b}" for a, b in CSV_FILE_PAIRS)
+        raise SystemExit(f"Neither {names} found under {root}")
+    for a, b in CSV_FILE_PAIRS:
+        hits = glob.glob(f"/kaggle/input/**/{a}", recursive=True)
+        if hits:
+            pa = hits[0]
+            pb = os.path.join(os.path.dirname(pa), b)
+            if os.path.exists(pb):
+                return [pa, pb]
+    names = " or ".join(f"{a}/{b}" for a, b in CSV_FILE_PAIRS)
+    raise SystemExit(f"Neither {names} found under /kaggle/input. Attach the dataset or pass --root.")
+
+def load_beats(csv_paths: list[str]):
+    """Each row: INPUT_LEN signal samples + a trailing class column. Binarize: 0=normal, else abnormal."""
+    df = pd.concat([pd.read_csv(p, header=None) for p in csv_paths], ignore_index=True)
     x = df.iloc[:, :INPUT_LEN].to_numpy(dtype=np.float32)
     y = (df.iloc[:, INPUT_LEN].to_numpy(dtype=np.int64) != 0).astype(np.float32)
     return x, y
@@ -257,8 +266,8 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     print(f"Device: {device}")
 
-    train_csv, test_csv = find_csvs(a.root)
-    x, y = load_beats(train_csv, test_csv)
+    csv_paths = find_csvs(a.root)
+    x, y = load_beats(csv_paths)
     x, y = subsample(x, y, a.max_per_class, a.seed)
     (x_tr, y_tr), (x_va, y_va), (x_te, y_te) = split_data(x, y, a.seed)
     print(f"Beats: {len(x)}  pos={int(y.sum())}  neg={int((1-y).sum())}")
@@ -314,7 +323,16 @@ def main():
     plot_roc(results, curves, os.path.join(a.out, "roc.png"))
     plot_comparison(results, best, os.path.join(a.out, "comparison.png"), a.target_sens)
     plot_cm(b["tuned"], os.path.join(a.out, "confusion_best.png"), f"{best} @ thr {b['tuned']['threshold']:.2f}")
-    print(f"\nSaved to {a.out}: comparison.json/csv, ecg_best.pt, roc.png, comparison.png, confusion_best.png")
+
+    # A few labelled example heartbeats per class, for the Models page and the demo-data importer.
+    samples_dir = os.path.join(a.out, "samples")
+    os.makedirs(samples_dir, exist_ok=True)
+    for cls_label, cls_name in ((0.0, "normal"), (1.0, "abnormal")):
+        idx = np.where(y_te == cls_label)[0][:3]
+        for i, beat_idx in enumerate(idx):
+            np.savetxt(os.path.join(samples_dir, f"{cls_name}_{i}.csv"), x_te[beat_idx], delimiter=",")
+
+    print(f"\nSaved to {a.out}: comparison.json/csv, ecg_best.pt, roc.png, comparison.png, confusion_best.png, samples/")
 
 if __name__ == "__main__":
     main()
