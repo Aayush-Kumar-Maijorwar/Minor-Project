@@ -9,6 +9,7 @@ const Login = React.lazy(() => import('../pages/Login'));
 const Patients = React.lazy(() => import('../pages/Patients'));
 const PatientProfile = React.lazy(() => import('../pages/PatientProfile'));
 const NewAnalysis = React.lazy(() => import('../pages/NewAnalysis'));
+const AnalysisResult = React.lazy(() => import('../pages/AnalysisResult'));
 const FusionAnalysis = React.lazy(() => import('../pages/FusionAnalysis'));
 const History = React.lazy(() => import('../pages/History'));
 const Flags = React.lazy(() => import('../pages/Flags'));
@@ -30,6 +31,7 @@ export function App() {
               <Route path="/patients" element={<Patients />} />
               <Route path="/patients/:id" element={<PatientProfile />} />
               <Route path="/analysis/new" element={<NewAnalysis />} />
+              <Route path="/analyses/:id" element={<AnalysisResult />} />
               <Route path="/fusion" element={<FusionAnalysis />} />
               <Route path="/history" element={<History />} />
               <Route path="/flags" element={<Flags />} />
