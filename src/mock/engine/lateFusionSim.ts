@@ -52,7 +52,11 @@ export function simulateLateFusion(
         modality: pred.modality,
         modelId: pred.modelId,
         weight: normalizedWeight,
-        score: pred.score
+        score: pred.score,
+        // Mock mode has no real per-model decision threshold - 0.65 mirrors the same
+        // 'high' cutoff this engine uses below, just so result-screen gauges have
+        // something sensible to render against in demo mode.
+        threshold: 0.65
       });
     }
 

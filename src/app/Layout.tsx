@@ -2,8 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Activity, LayoutDashboard, Users, FilePlus2, Share2, History, AlertCircle, Settings, Info, Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/useAppStore';
 import { Badge } from '@/components/ui/badge';
+import { useBackendStatus, backendStatusLevel } from '@/features/useBackendStatus';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -20,10 +20,23 @@ const bottomItems = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
+const STATUS_STYLES: Record<string, { dot: string; text: string; label: (n: number, total: number) => string }> = {
+  connected: { dot: 'bg-green-500', text: 'text-slate-600', label: (n, total) => `Backend connected — ${n} of ${total} models loaded` },
+  degraded: { dot: 'bg-amber-500', text: 'text-amber-700', label: (n, total) => `Some models missing (${n} of ${total} loaded)` },
+  offline: { dot: 'bg-red-500', text: 'text-red-700', label: () => 'Backend offline' },
+  loading: { dot: 'bg-slate-300 animate-pulse', text: 'text-slate-400', label: () => 'Checking backend…' }
+};
+
+const MOCK_MODE = import.meta.env.VITE_INFERENCE_MODE === 'mock';
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const demoMode = useAppStore(state => state.demoMode);
-  
+  const { data: health, isError, isLoading } = useBackendStatus();
+  const level = backendStatusLevel(health, isError, isLoading);
+  const style = STATUS_STYLES[level];
+  const loadedCount = health?.models.filter(m => m.state === 'loaded').length ?? 0;
+  const totalCount = health?.models.length ?? 0;
+
   if (location.pathname === '/login') {
     return <>{children}</>;
   }
@@ -83,7 +96,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Top Banner */}
-        {demoMode && (
+        {MOCK_MODE && (
           <div className="bg-teal-700 px-4 py-1.5 text-center flex items-center justify-center shrink-0">
             <span className="text-teal-50 text-sm font-medium">Demo Mode — Synthetic Data</span>
           </div>
@@ -98,9 +111,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-              <span>Systems Operational</span>
+            <div className={cn("flex items-center space-x-2 text-sm", style.text)} title={style.label(loadedCount, totalCount)}>
+              <span className={cn("h-2 w-2 rounded-full shrink-0", style.dot)}></span>
+              <span>{style.label(loadedCount, totalCount)}</span>
             </div>
             <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-medium">
               Dr

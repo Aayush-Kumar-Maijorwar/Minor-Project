@@ -67,6 +67,7 @@ export interface FusionContribution {
   modelId: string;
   weight: number;
   score: number;
+  threshold: number;
 }
 
 export interface FusionConditionResult {
@@ -170,6 +171,7 @@ export interface Analysis {
   flags: RiskFlag[];
   versions: { models: Record<string, string>; fusion: string };
   narrative?: Narrative;
+  submittedValues: { clinical: Record<string, unknown> | null; lab: Record<string, unknown> | null };
   doctorReview?: { status: 'pending' | 'reviewed'; note?: string; reviewedAt?: string };
 }
 
@@ -195,4 +197,7 @@ export interface ModelMetadata {
   integrationStatus: 'mock' | 'ready_for_integration' | 'integrated';
   metrics?: { label: string; value: string; isPlaceholder: boolean }[];
   plots?: string[];
+  comparisonUrl?: string;
+  fusionUrl?: string;
+  fake?: boolean;
 }

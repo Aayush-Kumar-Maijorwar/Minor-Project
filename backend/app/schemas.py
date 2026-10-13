@@ -50,6 +50,7 @@ class FusionContribution(Camel):
     model_id: str
     weight: float
     score: float
+    threshold: float
 
 
 class FusionConditionResult(Camel):

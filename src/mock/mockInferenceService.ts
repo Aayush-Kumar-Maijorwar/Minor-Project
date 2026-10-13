@@ -1,7 +1,7 @@
-import { InferenceService, RunAnalysisOptions } from '../services/inference/InferenceService';
-import { 
-  Patient, ModalityInput, ModalityType, ModelPrediction, FusionResult, 
-  Analysis, ExplainabilityResult, ModelMetadata, RiskFlag, UncertaintyResult 
+import { InferenceService, RunAnalysisOptions, RunAnalysisInput, HealthStatus, HealthModelStatus } from '../services/inference/InferenceService';
+import {
+  Patient, ModalityInput, ModalityType, ModelPrediction, FusionResult,
+  Analysis, ExplainabilityResult, ModelMetadata, RiskFlag, UncertaintyResult, Narrative
 } from '@/types';
 import { getMockPatient, mockPatients } from './data/mockPatients';
 import { simulateModalityPredictions } from './engine/modalityModelSim';
@@ -38,6 +38,21 @@ export class MockInferenceService implements InferenceService {
     return p;
   }
 
+  async createPatient(patient: { name: string; age: number; sex: 'male' | 'female' | 'other'; mrn?: string }): Promise<Patient> {
+    const id = `PT-${generateId()}`;
+    const p: Patient = {
+      id,
+      mrn: patient.mrn || `MRN-${Math.floor(Math.random() * 900000) + 100000}`,
+      name: patient.name,
+      age: patient.age,
+      sex: patient.sex,
+      status: 'active',
+      availableModalities: []
+    };
+    mockPatients.push(p);
+    return p;
+  }
+
   async createDemoPatient(scenarioId?: string): Promise<Patient> {
     const id = `DEMO-${generateId()}`;
     const p: Patient = {
@@ -71,13 +86,25 @@ export class MockInferenceService implements InferenceService {
     return simulateLateFusion(predictions, modalitiesAvailable);
   }
 
-  async runAnalysis(patientId: string, inputs: ModalityInput[], opts?: RunAnalysisOptions): Promise<Analysis> {
+  async runAnalysis(input: RunAnalysisInput, opts?: RunAnalysisOptions): Promise<Analysis> {
+    const patientId = input.patientId;
     const patient = await this.getPatient(patientId);
-    
+
+    // Mock mode ignores file CONTENTS (it has no real models to run them through) -
+    // only whether each section was filled in drives the synthetic engine.
+    const inputs: ModalityInput[] = [
+      { type: 'clinical', status: input.clinical ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'lab', status: input.lab ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'ecg', status: input.files?.ecg ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'chestXray', status: input.files?.chestXray ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'bloodSmearCell', status: input.files?.smearCell ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'bloodSmearField', status: input.files?.smearField ? 'available' : 'missing', source: 'synthetic' }
+    ];
+
     opts?.onProgress?.('preprocessing', 'Validating inputs');
     await sleep(400);
     const preprocessedInputs = await this.validateAndPreprocess(patientId, inputs);
-    
+
     opts?.onProgress?.('predicting', 'Running modality models');
     await sleep(600);
     const predictions = simulateModalityPredictions(patientId, preprocessedInputs, patient.scenarioId || 'healthy');
@@ -123,7 +150,11 @@ export class MockInferenceService implements InferenceService {
       uncertainty,
       flags,
       versions: { models: { 'model-clin-v1': '1.0' }, fusion: 'v2.0' },
-      narrative
+      narrative,
+      submittedValues: {
+        clinical: input.clinical ? { ...input.clinical } : null,
+        lab: input.lab ? { ...input.lab } : null
+      }
     };
 
     globalAnalyses.push(analysis);
@@ -145,6 +176,26 @@ export class MockInferenceService implements InferenceService {
 
   async listAnalyses(filters?: any): Promise<Analysis[]> {
     return [...globalAnalyses];
+  }
+
+  async regenerateNarrative(analysisId: string, _llm: boolean): Promise<Narrative> {
+    // Mock mode has no LLM to call - always returns the deterministic template,
+    // freshly rebuilt but not persisted, same as the real backend's contract.
+    const a = await this.getAnalysis(analysisId);
+    return buildNarrative(a.fusion);
+  }
+
+  async getHealth(): Promise<HealthStatus> {
+    const models: HealthModelStatus[] = [
+      { id: 'model-cxr-v2', modality: 'chestXray', condition: 'tuberculosis', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-smear-cell-v1', modality: 'bloodSmearCell', condition: 'malaria', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-smear-field-v1', modality: 'bloodSmearField', condition: 'leukemia', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-ecg-v1', modality: 'ecg', condition: 'hypertension', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-lab-v1', modality: 'lab', condition: 'diabetes', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-clin-diabetes-v1', modality: 'clinical', condition: 'diabetes', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-clin-hypertension-v1', modality: 'clinical', condition: 'hypertension', state: 'loaded', simulatedOrFake: true }
+    ];
+    return { status: 'ok', models, versions: {}, llmEnabled: false };
   }
 
   async getExplainability(analysisId: string): Promise<ExplainabilityResult[]> {

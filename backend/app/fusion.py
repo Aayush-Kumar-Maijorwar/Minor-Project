@@ -73,6 +73,7 @@ def _condition_result(condition: str, config: dict, runs: list[ModelRun]) -> dic
             "modelId": r.model_id,
             "weight": w,
             "score": r.score,
+            "threshold": r.threshold,
         })
 
     # Decision threshold on the fused 0..1 scale: exactly one model ran -> compare its own

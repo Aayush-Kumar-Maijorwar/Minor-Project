@@ -30,6 +30,11 @@ backend/.env
 backend/data/
 backend/artifacts/**/*.pt
 backend/artifacts/**/*.joblib
+backend/artifacts_fake/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Recorded demo replays are regenerated locally (scripts/record_replays.mjs) against
+# whatever backend is running - never committed so stale replays can't go stale silently.
+public/demo/replays/*.json
