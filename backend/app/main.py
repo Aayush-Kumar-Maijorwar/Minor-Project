@@ -137,7 +137,9 @@ def _run_tabular_group(fields: dict, model_fields: dict, predictions: list[dict]
             predictions.append(_to_prediction(pred))
 
 
-def _run_analysis(patient: dict, clinical_fields: dict, lab_fields: dict, files: dict, explain_with_llm: bool) -> dict:
+def _run_analysis(
+    patient: dict, clinical_fields: dict, lab_fields: dict, files: dict, explain_with_llm: bool
+) -> dict:
     analysis_id = _gen_id("AN")
     predictions: list[dict] = []
     issues_by_modality: dict[str, list[str]] = {m: [] for m in ALL_MODALITIES}
@@ -242,6 +244,7 @@ def _run_analysis(patient: dict, clinical_fields: dict, lab_fields: dict, files:
         "flags": flags_list,
         "versions": {"models": {p["modelId"]: "v1" for p in predictions}, "fusion": fusion["fusionVersion"]},
         "narrative": narrative,
+        "submittedValues": {"clinical": clinical_fields or None, "lab": lab_fields or None},
     }
     store.add_analysis(analysis)
     store.update_patient(patient["id"], lastAnalysisAt=analysis["createdAt"], currentRisk=fusion["overallRisk"])
@@ -338,6 +341,22 @@ def get_analysis(analysis_id: str):
     if not a:
         raise HTTPException(status_code=404, detail="analysis not found")
     return schemas.Analysis.model_validate(a)
+
+
+@app.post("/analyses/{analysis_id}/narrative", response_model=schemas.Narrative)
+def regenerate_narrative(analysis_id: str, body: schemas.NarrativeRequest):
+    """Re-render the narrative for an already-computed analysis - never reruns models.
+    Template by default; the AI rephrase only runs if the caller asks AND it's enabled
+    server-side, and silently falls back to the template on any failure (same rule as
+    POST /analyze). Not persisted - the stored analysis keeps its original narrative."""
+    a = store.get_analysis(analysis_id)
+    if not a:
+        raise HTTPException(status_code=404, detail="analysis not found")
+
+    template = {k: v for k, v in a["narrative"].items() if k != "llmText"}
+    template["generatedBy"] = "template"
+    narrative = narrative_llm.rephrase_with_llm(template, a["fusion"]) if body.llm else template
+    return schemas.Narrative.model_validate(narrative)
 
 
 @app.post("/analyses/{analysis_id}/review", response_model=schemas.Analysis)

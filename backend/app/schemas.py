@@ -137,6 +137,14 @@ class DoctorReview(Camel):
     reviewed_at: Optional[str] = None
 
 
+class SubmittedValues(Camel):
+    """What the patient/clinician actually typed in - numbers and enum strings only,
+    never files or identifiers - so a history view can still render a lab report card
+    for an old analysis even though input file previews are never persisted."""
+    clinical: Optional[dict] = None
+    lab: Optional[dict] = None
+
+
 class Analysis(Camel):
     id: str
     patient_id: str
@@ -149,7 +157,12 @@ class Analysis(Camel):
     flags: list[RiskFlag]
     versions: dict
     narrative: Narrative
+    submitted_values: SubmittedValues
     doctor_review: Optional[DoctorReview] = None
+
+
+class NarrativeRequest(Camel):
+    llm: bool = False
 
 
 class Patient(Camel):
@@ -185,6 +198,9 @@ class ModelMetadata(Camel):
     integration_status: str
     metrics: Optional[list[dict]] = None
     plots: Optional[list[str]] = None
+    comparison_url: Optional[str] = None
+    fusion_url: Optional[str] = None
+    fake: bool = False
 
 
 class HealthModel(Camel):

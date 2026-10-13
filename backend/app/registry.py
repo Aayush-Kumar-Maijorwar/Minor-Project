@@ -236,16 +236,23 @@ class Registry:
         return out
 
     def models_metadata(self) -> list[dict]:
+        diabetes_fusion_path = self.artifacts_dir / "tabular" / "diabetes_fusion.json"
+        fusion_url = "/static/artifacts/tabular/diabetes_fusion.json" if diabetes_fusion_path.exists() else None
+
         out = []
         for slot in self.slots.values():
             folder = self._slot_folder(slot)
+            comparison_name = "comparison.json" if slot.kind != "tabular" else f"{slot.slot_id}_comparison.json"
+            comparison_url = None
             plots = []
             if folder.exists():
+                rel = folder.relative_to(self.artifacts_dir).as_posix()
+                if (folder / comparison_name).exists():
+                    comparison_url = f"/static/artifacts/{rel}/{comparison_name}"
                 candidates = ["roc.png", "comparison.png", "confusion_best.png"]
                 if slot.kind == "tabular":
                     candidates = [f"{slot.slot_id}_roc.png", f"{slot.slot_id}_comparison.png",
                                   f"{slot.slot_id}_importance.png"]
-                rel = folder.relative_to(self.artifacts_dir).as_posix()
                 for name in candidates:
                     if (folder / name).exists():
                         plots.append(f"/static/artifacts/{rel}/{name}")
@@ -273,5 +280,8 @@ class Registry:
                 "integrationStatus": "integrated" if slot.state == "loaded" else "mock",
                 "metrics": metrics,
                 "plots": plots or None,
+                "comparisonUrl": comparison_url,
+                "fusionUrl": fusion_url if slot.condition == "diabetes" else None,
+                "fake": slot.fake,
             })
         return out
