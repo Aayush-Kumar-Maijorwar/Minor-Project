@@ -23,3 +23,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend (Python)
+backend/.venv
+backend/.env
+backend/data/
+backend/artifacts/**/*.pt
+backend/artifacts/**/*.joblib
+__pycache__/
+*.pyc
+.pytest_cache/
