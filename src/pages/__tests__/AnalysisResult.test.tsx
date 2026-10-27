@@ -123,4 +123,30 @@ describe('AnalysisResult', () => {
     const button = await screen.findByText(/Simplify wording/);
     expect(button.closest('button')?.disabled).toBe(true);
   });
+
+  it('shows the diabetes strategyUsed and which models were excluded', async () => {
+    const analysis = buildAnalysis();
+    analysis.fusion.perCondition[3] = {
+      condition: 'diabetes', fusedScore: 0.8, riskLevel: 'high',
+      contributions: [{ modality: 'clinicalLab', modelId: 'diabetes_combined', weight: 1, score: 0.9, threshold: 0.4 }],
+      strategyUsed: 'combined', notUsedModelIds: ['diabetes_lab', 'diabetes_clinical']
+    };
+    analysis.fusion.assessedConditions = ['tuberculosis', 'diabetes'];
+    analysis.fusion.notAssessedConditions = ['malaria', 'leukemia', 'hypertension'];
+    analysis.narrative!.conditions.push({ condition: 'diabetes', level: 'high', line: 'Diabetes: FLAGGED.' });
+
+    renderWithState(analysis);
+    await screen.findByText(/Priority: REVIEW/);
+    expect(screen.getByText(/Used the combined lab \+ clinical model/)).toBeTruthy();
+    expect(screen.getByText(/not used: diabetes_lab, diabetes_clinical/)).toBeTruthy();
+  });
+
+  it('toggles a raw-JSON view of the analysis response', async () => {
+    renderWithState(buildAnalysis());
+    await screen.findByText(/Priority: REVIEW/);
+
+    expect(screen.queryByText(/"id": "AN-1"/)).toBeNull();
+    fireEvent.click(screen.getByText('Raw response (JSON)'));
+    expect(screen.getByText(/"id": "AN-1"/)).toBeTruthy();
+  });
 });

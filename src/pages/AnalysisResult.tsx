@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import {
   AlertTriangle, CheckCircle2, HelpCircle, AlertCircle, ChevronDown, ChevronUp,
-  Printer, Copy, Sparkles
+  Printer, Copy, Sparkles, Code
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,13 @@ const LEVEL_DISPLAY: Record<string, { word: string; icon: React.ElementType; col
   moderate: { word: 'Borderline', icon: AlertCircle, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
   low: { word: 'No indication', icon: CheckCircle2, color: 'text-teal-700', bg: 'bg-teal-50 border-teal-200' },
   not_assessed: { word: 'Not assessed', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200' }
+};
+
+const STRATEGY_LABELS: Record<string, string> = {
+  combined: 'Used the combined lab + clinical model',
+  fusion: 'Used the lab + clinical fusion',
+  lab_only: 'Used the lab model only',
+  clinical_only: 'Used the clinical model only',
 };
 
 const PRIORITY_DISPLAY: Record<string, { word: string; icon: React.ElementType; color: string }> = {
@@ -91,6 +98,12 @@ function ConditionCard({ result, narrative, explainability }: {
         ) : (
           <>
             <p className="text-sm text-slate-700">{narrative?.line}</p>
+            {result.strategyUsed && (
+              <div className="text-xs text-slate-500">
+                {STRATEGY_LABELS[result.strategyUsed] ?? result.strategyUsed}
+                {result.notUsedModelIds?.length ? ` (not used: ${result.notUsedModelIds.join(', ')})` : ''}
+              </div>
+            )}
             <div className="space-y-2 pt-1">
               {result.contributions.map(c => (
                 <Gauge key={c.modelId} score={c.score} threshold={c.threshold}
@@ -180,6 +193,7 @@ export default function AnalysisResult() {
 
   const { data: health } = useBackendStatus();
 
+  const [showRawJson, setShowRawJson] = useState(false);
   const [narrative, setNarrative] = useState<Narrative | undefined>(analysis?.narrative);
   useEffect(() => setNarrative(analysis?.narrative), [analysis]);
   const [simplifying, setSimplifying] = useState(false);
@@ -368,6 +382,23 @@ export default function AnalysisResult() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Raw response, for debugging / transparency */}
+      <Card className="print:hidden">
+        <CardHeader>
+          <button type="button" onClick={() => setShowRawJson(s => !s)} className="flex items-center text-sm font-medium text-slate-700">
+            <Code className="w-4 h-4 mr-2" /> Raw response (JSON)
+            {showRawJson ? <ChevronUp className="w-4 h-4 ml-1.5" /> : <ChevronDown className="w-4 h-4 ml-1.5" />}
+          </button>
+        </CardHeader>
+        {showRawJson && (
+          <CardContent>
+            <pre className="text-xs bg-slate-900 text-slate-100 rounded-md p-4 overflow-auto max-h-96">
+              {JSON.stringify(analysis, null, 2)}
+            </pre>
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }
