@@ -24,7 +24,8 @@ def build_uncertainty(predictions: list[dict], fusion: dict, fusion_config: dict
     )
 
     assessed_count = len(fusion["assessedConditions"])
-    reliability = "adequate" if assessed_count == 5 else "limited" if assessed_count >= 3 else "low"
+    total_in_scope = len(fusion.get("conditionsInScope") or fusion["assessedConditions"] + fusion["notAssessedConditions"])
+    reliability = "adequate" if assessed_count == total_in_scope else "limited" if assessed_count >= 3 else "low"
     uncertainty_level = "low" if confidence >= 0.75 else "moderate" if confidence >= 0.5 else "high"
 
     missing: list[str] = []

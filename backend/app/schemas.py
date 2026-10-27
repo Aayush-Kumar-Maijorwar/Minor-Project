@@ -148,6 +148,30 @@ class SubmittedValues(Camel):
     lab: Optional[dict] = None
 
 
+class IgnoredInput(Camel):
+    """A file the caller submitted for a modality whose model isn't loaded (e.g. a
+    leukemia blood-smear field image, or an ECG, today) - never run, never counted as
+    a usable input, but still reported so the caller knows why it did nothing."""
+    modality: ModalityType
+    filename: Optional[str] = None
+    reason: str
+
+
+class FinalConditionSummary(Camel):
+    result: Literal["flagged", "borderline", "no_indication", "not_assessed"]
+    score: Optional[float] = None
+    threshold: Optional[float] = None
+    basis: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class FinalSummary(Camel):
+    """Deterministic, LLM-free one-sentence summary + simple per-condition JSON (final
+    changes spec, part B). The frontend renders this verbatim and computes nothing."""
+    summary: str
+    conditions: dict[str, FinalConditionSummary]
+
+
 class Analysis(Camel):
     id: str
     patient_id: str
@@ -161,6 +185,9 @@ class Analysis(Camel):
     versions: dict
     narrative: Narrative
     submitted_values: SubmittedValues
+    conditions_in_scope: list[Condition] = []
+    ignored_inputs: list[IgnoredInput] = []
+    final_summary: Optional[FinalSummary] = None
     doctor_review: Optional[DoctorReview] = None
 
 
@@ -223,6 +250,7 @@ class HealthResponse(Camel):
     models: list[HealthModel]
     versions: dict
     llm_enabled: bool
+    conditions_in_scope: list[Condition] = []
 
 
 class ReviewUpdate(Camel):

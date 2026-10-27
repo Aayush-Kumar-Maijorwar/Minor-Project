@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from starlette.concurrency import run_in_threadpool
 
+from . import final_summary as final_summary_mod
 from . import flags as flags_mod
 from . import fusion as fusion_mod
 from . import narrative as narrative_mod
@@ -62,6 +63,51 @@ FILE_SLOTS = {
     "bloodSmearCell": ("malaria", "malaria"),
     "bloodSmearField": ("leukemia", "leukemia"),
 }
+# Every file-driven modality's underlying registry slot, incl. ecg (not itself a
+# FILE_SLOTS entry since its condition, hypertension, can also be assessed without it).
+MODALITY_SLOT_ID = {"chestXray": "tb", "bloodSmearCell": "malaria", "bloodSmearField": "leukemia", "ecg": "ecg"}
+
+LAB_FIELD_LABELS = {"hba1c": "HbA1c", "blood_glucose": "blood glucose"}
+CLINICAL_FIELD_LABELS = {
+    "age": "age", "sex": "sex", "bmi": "BMI", "smoking_history": "smoking history",
+    "hypertension": "known hypertension", "heart_disease": "known heart disease",
+}
+DIABETES_CLINICAL_REQUIRED = set(CLINICAL_MODEL_FIELDS["diabetes_clinical"])
+HYPERTENSION_CLINICAL_REQUIRED = set(CLINICAL_MODEL_FIELDS["hypertension_clinical"])
+
+
+def _model_loaded_for_modality(modality: str) -> bool:
+    slot = registry.slots.get(MODALITY_SLOT_ID.get(modality, ""))
+    return bool(slot and slot.state == "loaded")
+
+
+def _not_assessed_reason(condition: str, clinical_fields: dict, lab_fields: dict, files: dict) -> str:
+    """Caller-supplied reason text for final_summary.build_final_summary - kept here
+    (not in final_summary.py) because it needs the raw request fields, not just the
+    already-computed fusion result."""
+    if condition == "tuberculosis":
+        return "no chest X-ray provided" if not files.get("chestXray") else "chest X-ray could not be used"
+    if condition == "malaria":
+        return "no blood-smear cell image provided" if not files.get("bloodSmearCell") else "blood-smear cell image could not be used"
+    if condition == "diabetes":
+        lab_present = set(lab_fields)
+        if lab_present and lab_present != {"hba1c", "blood_glucose"}:
+            missing = {"hba1c", "blood_glucose"} - lab_present
+            given_label = LAB_FIELD_LABELS[next(iter(lab_present))]
+            missing_label = LAB_FIELD_LABELS[next(iter(missing))]
+            return f"{given_label} given but {missing_label} missing"
+        clinical_present = set(clinical_fields)
+        if clinical_present and not DIABETES_CLINICAL_REQUIRED.issubset(clinical_present):
+            missing = DIABETES_CLINICAL_REQUIRED - clinical_present
+            return "clinical data given but missing: " + ", ".join(CLINICAL_FIELD_LABELS[f] for f in sorted(missing))
+        return "no lab or clinical data provided"
+    if condition == "hypertension":
+        clinical_present = set(clinical_fields)
+        if clinical_present and not HYPERTENSION_CLINICAL_REQUIRED.issubset(clinical_present):
+            missing = HYPERTENSION_CLINICAL_REQUIRED - clinical_present
+            return "clinical data given but missing: " + ", ".join(CLINICAL_FIELD_LABELS[f] for f in sorted(missing))
+        return "no clinical data provided"
+    return "not assessed"
 
 
 def _gen_id(prefix: str) -> str:
@@ -149,6 +195,7 @@ def _run_analysis(
     predictions: list[dict] = []
     issues_by_modality: dict[str, list[str]] = {m: [] for m in ALL_MODALITIES}
     provided: dict[str, bool] = {m: False for m in ALL_MODALITIES}
+    ignored_inputs: list[dict] = []
 
     if clinical_fields:
         provided["clinical"] = True
@@ -170,6 +217,11 @@ def _run_analysis(
         upload = files.get(modality)
         if upload is None:
             continue
+        if not _model_loaded_for_modality(modality):
+            slot = registry.slots.get(slot_id)
+            reason = (slot.reason if slot else None) or "model not available"
+            ignored_inputs.append({"modality": modality, "filename": upload.filename, "reason": reason})
+            continue
         provided[modality] = True
         raw = upload.file.read()
         issue = _validate_image_bytes(raw)
@@ -186,24 +238,29 @@ def _run_analysis(
 
     ecg_upload = files.get("ecg")
     if ecg_upload is not None:
-        provided["ecg"] = True
-        raw = ecg_upload.file.read()
-        if len(raw) > validation.MAX_UPLOAD_BYTES:
-            issues_by_modality["ecg"].append("file exceeds 15 MB")
-            predictions.append(_skipped("ecg", "ecg", "hypertension"))
+        if not _model_loaded_for_modality("ecg"):
+            ecg_slot = registry.slots.get("ecg")
+            reason = (ecg_slot.reason if ecg_slot else None) or "model not available"
+            ignored_inputs.append({"modality": "ecg", "filename": ecg_upload.filename, "reason": reason})
         else:
-            try:
-                values = parse_heartbeat(raw)
-            except ValueError as e:
-                issues_by_modality["ecg"].append(str(e))
+            provided["ecg"] = True
+            raw = ecg_upload.file.read()
+            if len(raw) > validation.MAX_UPLOAD_BYTES:
+                issues_by_modality["ecg"].append("file exceeds 15 MB")
                 predictions.append(_skipped("ecg", "ecg", "hypertension"))
             else:
-                pred = registry.run_ecg(values)
-                if pred is None:
-                    issues_by_modality["ecg"].append("ecg: model not available")
+                try:
+                    values = parse_heartbeat(raw)
+                except ValueError as e:
+                    issues_by_modality["ecg"].append(str(e))
                     predictions.append(_skipped("ecg", "ecg", "hypertension"))
                 else:
-                    predictions.append(_to_prediction(pred))
+                    pred = registry.run_ecg(values)
+                    if pred is None:
+                        issues_by_modality["ecg"].append("ecg: model not available")
+                        predictions.append(_skipped("ecg", "ecg", "hypertension"))
+                    else:
+                        predictions.append(_to_prediction(pred))
 
     # A modality is 'available' only if >=1 of its models actually ran (status 'ok') -
     # partial/invalid input that ran nothing is reported as 'missing' with the reason why.
@@ -219,7 +276,8 @@ def _run_analysis(
         )
         for p in predictions if p["status"] == "ok"
     ]
-    fusion = fusion_mod.simulate_fusion(runs, registry.fusion_config, modalities_used)
+    conditions_in_scope = registry.conditions_in_scope()
+    fusion = fusion_mod.simulate_fusion(runs, registry.fusion_config, modalities_used, conditions_in_scope)
     fusion["analysisId"] = analysis_id
 
     flags_list = flags_mod.build_flags(analysis_id, patient["id"], fusion)
@@ -246,6 +304,12 @@ def _run_analysis(
     if explain_with_llm:
         narrative = narrative_llm.rephrase_with_llm(narrative, fusion)
 
+    not_assessed_reasons = {
+        c: _not_assessed_reason(c, clinical_fields, lab_fields, files)
+        for c in fusion["notAssessedConditions"]
+    }
+    final_summary = final_summary_mod.build_final_summary(fusion, not_assessed_reasons)
+
     analysis = {
         "id": analysis_id,
         "patientId": patient["id"],
@@ -259,6 +323,9 @@ def _run_analysis(
         "versions": {"models": {p["modelId"]: "v1" for p in predictions}, "fusion": fusion["fusionVersion"]},
         "narrative": narrative,
         "submittedValues": {"clinical": clinical_fields or None, "lab": lab_fields or None},
+        "conditionsInScope": conditions_in_scope,
+        "ignoredInputs": ignored_inputs,
+        "finalSummary": final_summary,
     }
     store.add_analysis(analysis)
     store.update_patient(patient["id"], lastAnalysisAt=analysis["createdAt"], currentRisk=fusion["overallRisk"])
@@ -275,6 +342,7 @@ def health():
         models=[schemas.HealthModel.model_validate(m) for m in registry.health_models()],
         versions=registry.versions(),
         llm_enabled=settings.llm_enabled,
+        conditions_in_scope=registry.conditions_in_scope(),
     )
 
 
@@ -337,7 +405,10 @@ async def analyze(
     validation.validate_lab_fields(hba1c=hba1c, blood_glucose=blood_glucose)
 
     files = {"chestXray": chest_xray, "bloodSmearCell": smear_cell, "bloodSmearField": smear_field, "ecg": ecg}
-    if not clinical_fields and not lab_fields and not any(f is not None for f in files.values()):
+    usable_file_provided = any(
+        f is not None and _model_loaded_for_modality(modality) for modality, f in files.items()
+    )
+    if not clinical_fields and not lab_fields and not usable_file_provided:
         raise HTTPException(status_code=422, detail="Provide at least one input")
 
     result = await run_in_threadpool(_run_analysis, patient, clinical_fields, lab_fields, files, explain_with_llm)

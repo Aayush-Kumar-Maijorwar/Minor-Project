@@ -147,12 +147,21 @@ def _diabetes_condition_result(config: dict, runs: list[ModelRun]) -> dict:
     return result
 
 
-def simulate_fusion(runs: list[ModelRun], fusion_config: dict, modalities_used: list[str]) -> dict:
+def simulate_fusion(
+    runs: list[ModelRun], fusion_config: dict, modalities_used: list[str],
+    conditions_in_scope: list[str] | None = None,
+) -> dict:
     """The Phase 1 rule, ported: overallRisk is the highest level among ASSESSED conditions,
     'incomplete_data' only when nothing could be assessed, never degraded by missing data.
+
+    conditions_in_scope ("final changes" spec, part A): conditions with at least one
+    loaded, quality-passing model - normally registry.conditions_in_scope(). A
+    condition outside this list is omitted entirely (never shown as not_assessed);
+    defaults to every known condition for direct unit testing of this module.
     """
+    conditions_in_scope = conditions_in_scope if conditions_in_scope is not None else ALL_CONDITIONS
     per_condition = []
-    for condition in ALL_CONDITIONS:
+    for condition in conditions_in_scope:
         config = fusion_config.get(condition, {"components": []})
         condition_runs = [r for r in runs if r.condition == condition]
         if condition == "diabetes" and config.get("strategy") == "best_available":
@@ -161,7 +170,7 @@ def simulate_fusion(runs: list[ModelRun], fusion_config: dict, modalities_used: 
             per_condition.append(_condition_result(condition, config, condition_runs))
 
     assessed = [c["condition"] for c in per_condition if c["riskLevel"] != "not_assessed"]
-    not_assessed = [c for c in ALL_CONDITIONS if c not in assessed]
+    not_assessed = [c for c in conditions_in_scope if c not in assessed]
 
     review_required = False
     overall_rank = 0
@@ -196,10 +205,11 @@ def simulate_fusion(runs: list[ModelRun], fusion_config: dict, modalities_used: 
         "modalitiesExcluded": excluded,
         "assessedConditions": assessed,
         "notAssessedConditions": not_assessed,
+        "conditionsInScope": conditions_in_scope,
         "fusionVersion": "v1.0-backend",
         "simulated": False,
         "note": (
-            f"{len(assessed)} of {len(ALL_CONDITIONS)} conditions assessed; missing or invalid "
+            f"{len(assessed)} of {len(conditions_in_scope)} conditions assessed; missing or invalid "
             "inputs excluded the rest from this fusion run."
         ),
     }

@@ -190,16 +190,17 @@ def build_narrative(
     not_assessed = fusion["notAssessedConditions"]
     flagged = [c["condition"] for c in fusion["perCondition"] if c["riskLevel"] == "high"]
 
+    total_in_scope = len(fusion.get("conditionsInScope") or (assessed + not_assessed))
     if not assessed:
         headline = "No condition could be assessed: no usable data was provided."
         priority = "incomplete"
     elif flagged:
         names = ", ".join(_title(c) for c in flagged)
-        headline = f"Priority: REVIEW. {names} flagged. {len(not_assessed)} of 5 conditions not assessed."
+        headline = f"Priority: REVIEW. {names} flagged. {len(not_assessed)} of {total_in_scope} conditions not assessed."
         priority = "review"
     else:
         headline = (
-            f"No condition flagged on the data provided. {len(not_assessed)} of 5 not "
+            f"No condition flagged on the data provided. {len(not_assessed)} of {total_in_scope} not "
             "assessed; this does not rule out disease."
         )
         priority = "routine"

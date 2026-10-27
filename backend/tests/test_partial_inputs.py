@@ -132,16 +132,21 @@ def test_xray_and_lab_assesses_tb_and_diabetes_lab_only_rest_not_assessed(real_c
     resp = real_client.post("/analyze", data={"patient_id": real_patient_id, **LAB_POSITIVE},
                              files={"chest_xray": ("tb.png", TB_IMAGE, "image/png")})
     assert resp.status_code == 200
-    fusion = resp.json()["fusion"]
+    body = resp.json()
+    fusion = body["fusion"]
     assert set(fusion["assessedConditions"]) == {"tuberculosis", "diabetes"}
-    for condition in ("malaria", "leukemia", "hypertension"):
+    # leukemia has no loaded model - it's out of conditionsInScope entirely, never
+    # shown as not_assessed; only malaria/hypertension (in-scope, no input) are.
+    assert "leukemia" not in body["conditionsInScope"]
+    assert "leukemia" not in fusion["notAssessedConditions"]
+    for condition in ("malaria", "hypertension"):
         assert condition in fusion["notAssessedConditions"]
     diabetes = next(c for c in fusion["perCondition"] if c["condition"] == "diabetes")
     assert diabetes["strategyUsed"] == "lab_only"
     _assert_safety_invariants(fusion)
 
 
-def test_all_real_modalities_assesses_everything_but_leukemia(real_client, real_patient_id):
+def test_all_real_modalities_assesses_everything_in_scope(real_client, real_patient_id):
     resp = real_client.post(
         "/analyze",
         data={"patient_id": real_patient_id, **LAB_POSITIVE, **CLINICAL_POSITIVE},
@@ -151,9 +156,11 @@ def test_all_real_modalities_assesses_everything_but_leukemia(real_client, real_
         },
     )
     assert resp.status_code == 200
-    fusion = resp.json()["fusion"]
+    body = resp.json()
+    fusion = body["fusion"]
     assert set(fusion["assessedConditions"]) == {"tuberculosis", "malaria", "diabetes", "hypertension"}
-    assert fusion["notAssessedConditions"] == ["leukemia"]
+    assert fusion["notAssessedConditions"] == []
+    assert "leukemia" not in body["conditionsInScope"]
     _assert_safety_invariants(fusion)
 
 
@@ -168,16 +175,15 @@ def test_hba1c_without_glucose_is_not_assessed_and_names_the_field(real_client, 
     _assert_safety_invariants(fusion)
 
 
-def test_leukemia_field_image_only_no_crash_all_not_assessed(real_client, real_patient_id):
+def test_leukemia_field_image_only_is_ignored_and_422(real_client, real_patient_id):
+    """leukemia has no loaded model - a smear-field-only submission has no usable
+    input at all, so this is a 422, not a 200 with everything not_assessed."""
     resp = real_client.post(
         "/analyze", data={"patient_id": real_patient_id},
         files={"smear_field": ("field.png", LEUKEMIA_FIELD_PLACEHOLDER_IMAGE, "image/png")},
     )
-    assert resp.status_code == 200
-    fusion = resp.json()["fusion"]
-    assert fusion["assessedConditions"] == []
-    assert fusion["overallRisk"] == "incomplete_data"
-    _assert_safety_invariants(fusion)
+    assert resp.status_code == 422
+    assert "Provide at least one input" in resp.json()["detail"]
 
 
 def test_no_inputs_is_422(real_client, real_patient_id):

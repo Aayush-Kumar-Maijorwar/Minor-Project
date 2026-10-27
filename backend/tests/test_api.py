@@ -67,6 +67,10 @@ def test_zero_artifacts_app_starts_and_everything_is_not_assessed(tmp_path, no_a
     assert resp.status_code == 200
     body = resp.json()
     assert body["fusion"]["overallRisk"] == "incomplete_data"
-    assert len(body["fusion"]["notAssessedConditions"]) == 5
+    # No condition has any loaded model - conditionsInScope is empty, so nothing is
+    # even eligible to be "not assessed" (out-of-scope conditions are omitted, not
+    # shown as not_assessed).
+    assert body["conditionsInScope"] == []
+    assert body["fusion"]["notAssessedConditions"] == []
     lab_input = next(i for i in body["inputs"] if i["type"] == "lab")
     assert any("model not available" in issue for issue in lab_input["validation"]["issues"])

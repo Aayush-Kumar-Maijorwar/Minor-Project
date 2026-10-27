@@ -212,6 +212,15 @@ class Registry:
             "source": slot.meta.get("source"),
         } for slot in self.slots.values()]
 
+    def conditions_in_scope(self) -> list[str]:
+        """Conditions with at least one LOADED (quality-gate-passing) model, in the
+        canonical app.fusion.ALL_CONDITIONS order. A condition with no loaded model
+        (e.g. leukemia today) drops out entirely - and rejoins automatically, with no
+        code change, the moment a real artifact for it is loaded at startup."""
+        from .fusion import ALL_CONDITIONS
+        loaded = {slot.condition for slot in self.slots.values() if slot.state == "loaded"}
+        return [c for c in ALL_CONDITIONS if c in loaded]
+
     def versions(self) -> dict:
         out = {"sklearn": sklearn.__version__, "torch": None}
         if IMAGE_TORCH_OK:
