@@ -2,76 +2,69 @@
   {
     "id": "full-workup-concerning",
     "title": "1. Full work-up (concerning)",
-    "description": "Every input provided. Sample images/ECG are chosen to be concerning examples where we have them.",
-    "patient": { "name": "Demo Patient — Full Work-up", "age": 58, "sex": "female" },
-    "clinical": { "age": 58, "sex": "Female", "bmi": 33, "smokingHistory": "current", "hypertension": true, "heartDisease": false },
-    "lab": { "hba1c": 8.4, "bloodGlucose": 210 },
+    "description": "Complete lab + clinical data, a flagged TB chest X-ray, and a flagged malaria blood smear - all from real held-out model test samples.",
+    "patient": { "name": "Demo Patient A", "age": 60, "sex": "male" },
+    "clinical": { "age": 60, "sex": "Male", "bmi": 32, "smokingHistory": "former", "hypertension": true, "heartDisease": false },
+    "lab": { "hba1c": 9.0, "bloodGlucose": 240 },
     "files": {
-      "chestXray": "/demo/chest_xray_positive.png",
-      "smearCell": "/demo/smear_cell_positive.png",
-      "smearField": "/demo/smear_field_positive.png",
-      "ecg": "/demo/ecg_abnormal.csv"
+      "chestXray": "/demo/images/tb_xray_positive.png",
+      "smearCell": "/demo/images/malaria_cell_positive.png"
     },
-    "groundTruth": { "tuberculosis": "positive", "malaria": "positive", "leukemia": "positive", "diabetes": "positive", "hypertension": "positive" },
-    "note": "Demo case: composite — images come from different public datasets; clinical/lab values are synthetic."
+    "groundTruth": { "tuberculosis": "positive", "malaria": "positive", "diabetes": "positive", "hypertension": "positive" },
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
   },
   {
     "id": "healthy-screening",
     "title": "2. Healthy screening",
-    "description": "Every input provided. Sample images/ECG are negative (normal) examples.",
-    "patient": { "name": "Demo Patient — Healthy Screening", "age": 34, "sex": "male" },
-    "clinical": { "age": 34, "sex": "Male", "bmi": 23, "smokingHistory": "never", "hypertension": false, "heartDisease": false },
-    "lab": { "hba1c": 5.1, "bloodGlucose": 88 },
+    "description": "Complete lab + clinical data, an unflagged TB chest X-ray, and an unflagged malaria blood smear - all from real held-out model test samples, with negative tabular values.",
+    "patient": { "name": "Demo Patient B", "age": 30, "sex": "female" },
+    "clinical": { "age": 30, "sex": "Female", "bmi": 22, "smokingHistory": "never", "hypertension": false, "heartDisease": false },
+    "lab": { "hba1c": 4.5, "bloodGlucose": 80 },
     "files": {
-      "chestXray": "/demo/chest_xray_negative.png",
-      "smearCell": "/demo/smear_cell_negative.png",
-      "smearField": "/demo/smear_field_negative.png",
-      "ecg": "/demo/ecg_normal.csv"
+      "chestXray": "/demo/images/tb_xray_negative.png",
+      "smearCell": "/demo/images/malaria_cell_negative.png"
     },
-    "groundTruth": { "tuberculosis": "negative", "malaria": "negative", "leukemia": "negative", "diabetes": "negative", "hypertension": "negative" },
-    "note": "Demo case: composite — images come from different public datasets; clinical/lab values are synthetic."
+    "groundTruth": { "tuberculosis": "negative", "malaria": "negative", "diabetes": "negative", "hypertension": "negative" },
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
   },
   {
     "id": "partial-xray-lab",
     "title": "3. Partial: chest X-ray + lab only",
-    "description": "Only a chest X-ray and lab values are provided — the rest should show as not assessed.",
-    "patient": { "name": "Demo Patient — Partial Work-up", "age": 46, "sex": "female" },
-    "lab": { "hba1c": 6.8, "bloodGlucose": 160 },
+    "description": "Only a chest X-ray and lab values are provided - malaria, leukemia, and hypertension should all show as not assessed.",
+    "patient": { "name": "Demo Patient C", "age": 46, "sex": "female" },
+    "lab": { "hba1c": 7.8, "bloodGlucose": 180 },
     "files": {
-      "chestXray": "/demo/chest_xray_positive.png"
+      "chestXray": "/demo/images/tb_xray_positive.png"
     },
     "groundTruth": { "tuberculosis": "positive", "diabetes": "positive" },
-    "note": "Demo case: composite — images come from different public datasets; clinical/lab values are synthetic."
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
   },
   {
     "id": "lab-only-diabetes",
     "title": "4. Lab report only",
-    "description": "Only lab values are provided — diabetes should be assessed, all four other conditions not assessed.",
-    "patient": { "name": "Demo Patient — Lab Only", "age": 61, "sex": "male" },
+    "description": "Only lab values are provided - diabetes should be assessed via the lab-only model, all four other conditions not assessed.",
+    "patient": { "name": "Demo Patient D", "age": 61, "sex": "male" },
     "lab": { "hba1c": 7.9, "bloodGlucose": 195 },
     "groundTruth": { "diabetes": "positive" },
-    "note": "Demo case: values are synthetic."
+    "note": "Composite demo case: values are synthetic."
   },
   {
     "id": "borderline-values",
     "title": "5. Borderline values",
-    "description": "Clinical and lab values sit close to the flag thresholds, to show a BORDERLINE result.",
-    "patient": { "name": "Demo Patient — Borderline", "age": 50, "sex": "female" },
-    "clinical": { "age": 50, "sex": "Female", "bmi": 29.5, "smokingHistory": "former", "hypertension": false, "heartDisease": false },
-    "lab": { "hba1c": 6.3, "bloodGlucose": 140 },
-    "groundTruth": { "diabetes": "borderline" },
-    "note": "Demo case: values are synthetic, deliberately chosen near the flag thresholds."
+    "description": "Complete lab + clinical values deliberately chosen to land diabetes in the moderate (borderline) band of the combined model.",
+    "patient": { "name": "Demo Patient E", "age": 50, "sex": "female" },
+    "clinical": { "age": 50, "sex": "Female", "bmi": 29, "smokingHistory": "former", "hypertension": false, "heartDisease": false },
+    "lab": { "hba1c": 6.1, "bloodGlucose": 155 },
+    "groundTruth": { "diabetes": "borderline", "hypertension": "positive" },
+    "note": "Composite demo case: values are synthetic, deliberately chosen near the flag thresholds."
   },
   {
-    "id": "ecg-hypertension-fusion",
-    "title": "6. ECG + clinical (hypertension fusion)",
-    "description": "Clinical data and an ECG together — shows hypertension fused from two models.",
-    "patient": { "name": "Demo Patient — ECG Fusion", "age": 63, "sex": "male" },
-    "clinical": { "age": 63, "sex": "Male", "bmi": 28, "smokingHistory": "former", "hypertension": true, "heartDisease": true },
-    "files": {
-      "ecg": "/demo/ecg_abnormal.csv"
-    },
-    "groundTruth": { "hypertension": "positive" },
-    "note": "Demo case: ECG is a synthetic placeholder; clinical values are synthetic."
+    "id": "clinical-only",
+    "title": "6. Clinical only",
+    "description": "Only clinical values are provided (no lab) - diabetes is assessed via the clinical-only model with a low-confidence caveat, and hypertension is assessed from the same clinical profile.",
+    "patient": { "name": "Demo Patient F", "age": 65, "sex": "male" },
+    "clinical": { "age": 65, "sex": "Male", "bmi": 32, "smokingHistory": "former", "hypertension": true, "heartDisease": true },
+    "groundTruth": { "diabetes": "positive", "hypertension": "positive" },
+    "note": "Composite demo case: values are synthetic."
   }
 ]
