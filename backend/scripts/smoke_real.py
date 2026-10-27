@@ -197,13 +197,16 @@ def main():
             print("  all safety checks passed")
 
         if args.save_replays:
+            # Matches src/features/replay.ts's ReplayRecord contract exactly:
+            # {recordedAt, fake, modelVersions, analysis} - never the Analysis object
+            # flattened at top level.
             replay_dir = repo_root / "public" / "demo" / "replays"
             replay_dir.mkdir(parents=True, exist_ok=True)
             replay = {
-                **analysis,
                 "recordedAt": analysis.get("createdAt"),
-                "modelVersions": {m["id"]: m.get("testAuc") for m in health["models"]},
-                "fake": False,
+                "fake": any(m.get("simulatedOrFake") for m in health["models"]),
+                "modelVersions": {m["id"]: str(m.get("testAuc")) for m in health["models"]},
+                "analysis": analysis,
             }
             (replay_dir / f"{case['id']}.json").write_text(json.dumps(replay, indent=2))
         print()
