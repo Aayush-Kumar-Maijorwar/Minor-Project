@@ -34,15 +34,19 @@ copy the output folders in:
 
 ```
 backend/artifacts/
-  tb/           tb_best.pt, comparison.json, roc.png, comparison.png, confusion_best.png
+  tb/           tb_best.pt, comparison.json, roc.png, comparison.png, confusion_best.png, samples/
   malaria/      malaria_best.pt, comparison.json, ...
-  leukemia/     leukemia_best.pt, comparison.json, ...
-  ecg/          ecg_best.pt, comparison.json, ...
+  leukemia/     leukemia_best.pt, comparison.json, ...   (no model yet - fine, see below)
+  ecg/          ecg_best.pt, comparison.json, ...        (no model yet - fine, see below)
   tabular/      diabetes_lab_best.joblib, diabetes_lab_comparison.json,
                 diabetes_clinical_best.joblib, diabetes_clinical_comparison.json,
                 hypertension_clinical_best.joblib, hypertension_clinical_comparison.json,
-                diabetes_combined_best.joblib (reference only, never loaded for inference),
                 diabetes_fusion.json (optional - overrides the default diabetes fusion weights)
+    reference/  any other trained model that doesn't match the per-modality contract
+                above (e.g. a combined-feature diabetes model, or one trained without
+                a required column) - just its comparison.json/csv/png, never a
+                .pt/.joblib. Served as static files for the Models page; never loaded
+                into the registry, never used for inference.
 ```
 
 `*.pt` / `*.joblib` files are gitignored (large binaries); `comparison.json/csv` and
@@ -52,7 +56,19 @@ also gitignored - it's state, not a fixture.
 A missing, corrupt, or incompatible artifact never crashes the app: that one model
 slot is reported `missing`/`error` with a reason in `/health`, its condition becomes
 `not_assessed`, and every other model keeps working. With **zero** artifacts present,
-the app still starts and every condition is `not_assessed`.
+the app still starts and every condition is `not_assessed`. Leukemia and ECG having no
+trained model yet is exactly this case - not a bug.
+
+### Quality gate
+
+A model that loads successfully can still be refused: if its own `comparison.json`
+reports `test_auc` below `MIN_TEST_AUC` (env var, default **0.65**), the registry marks
+it `state: "error"`, `reason: "below quality gate (test_auc=... < 0.65)"` in `/health`,
+and never runs it - the file exists, but a model with no demonstrated signal must never
+touch a real patient's result. This is on top of (not instead of) the existing
+structural checks (a stored decision threshold, and for images: `arch`, `img_size`,
+`mean`, `std` in the checkpoint) - those are already enforced by the predictor failing
+to construct.
 
 ## Running it
 
@@ -67,6 +83,13 @@ uvicorn app.main:app --port 8000
 ```
 
 Open `http://localhost:8000/docs` for interactive API docs.
+
+To sanity-check every loaded model outside the API (one prediction each, printing
+probability/threshold/decision against the model's own stored threshold):
+
+```powershell
+python scripts/predict_one.py
+```
 
 ## API summary
 
