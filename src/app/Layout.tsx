@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, LayoutDashboard, Users, FilePlus2, Share2, History, AlertCircle, Settings, Info, Box } from 'lucide-react';
+import { Activity, LayoutDashboard, Users, FilePlus2, Share2, History, AlertCircle, Settings, Info, Box, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useBackendStatus, backendStatusLevel } from '@/features/useBackendStatus';
+import { useOnClickOutside } from '@/features/useOnClickOutside';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -36,6 +37,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const style = STATUS_STYLES[level];
   const loadedCount = health?.models.filter(m => m.state === 'loaded').length ?? 0;
   const totalCount = health?.models.length ?? 0;
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useOnClickOutside(popoverRef, () => setPopoverOpen(false), popoverOpen);
 
   if (location.pathname === '/login') {
     return <>{children}</>;
@@ -111,9 +115,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className={cn("flex items-center space-x-2 text-sm", style.text)} title={style.label(loadedCount, totalCount)}>
-              <span className={cn("h-2 w-2 rounded-full shrink-0", style.dot)}></span>
-              <span>{style.label(loadedCount, totalCount)}</span>
+            <div className="relative" ref={popoverRef}>
+              <button
+                type="button"
+                onClick={() => setPopoverOpen(o => !o)}
+                className={cn("flex items-center space-x-2 text-sm rounded-md px-1.5 py-1 hover:bg-slate-50", style.text)}
+                title={style.label(loadedCount, totalCount)}
+              >
+                <span className={cn("h-2 w-2 rounded-full shrink-0", style.dot)}></span>
+                <span>{style.label(loadedCount, totalCount)}</span>
+              </button>
+              {popoverOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-md shadow-lg z-50 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-1">Models</div>
+                  {health?.models.length ? health.models.map(m => {
+                    const StateIcon = m.state === 'loaded' ? CheckCircle2 : m.state === 'error' ? AlertTriangle : XCircle;
+                    const stateColor = m.state === 'loaded' ? 'text-green-600' : m.state === 'error' ? 'text-amber-600' : 'text-slate-400';
+                    return (
+                      <div key={m.id} className="flex items-start space-x-2 px-1 py-1 text-xs">
+                        <StateIcon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", stateColor)} />
+                        <div>
+                          <div className="font-medium text-slate-800">{m.id} <span className="text-slate-400">({m.state})</span></div>
+                          {m.reason && <div className="text-slate-500">{m.reason}</div>}
+                          {m.source && <div className="text-slate-400">source: {m.source}</div>}
+                        </div>
+                      </div>
+                    );
+                  }) : <div className="text-xs text-slate-400 px-1">No model status available.</div>}
+                </div>
+              )}
             </div>
             <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-medium">
               Dr
