@@ -1,5 +1,6 @@
 {
   "diabetes": {
+    "strategy": "best_available",
     "components": [
       { "modality": "lab", "weight": 0.5 },
       { "modality": "clinical", "weight": 0.5 }

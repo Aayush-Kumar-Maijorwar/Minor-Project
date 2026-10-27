@@ -27,6 +27,11 @@ TABULAR_SLOTS = {
     "diabetes_lab": {"modality": "lab", "condition": "diabetes"},
     "diabetes_clinical": {"modality": "clinical", "condition": "diabetes"},
     "hypertension_clinical": {"modality": "clinical", "condition": "hypertension"},
+    # Combined lab+clinical model - loaded like any other tabular slot (same quality
+    # gate), but only USED for a verdict when every one of its inputs is present (the
+    # "best_available" strategy in fusion.py); otherwise it's just an extra signal
+    # that never double-counts against diabetes_lab/diabetes_clinical.
+    "diabetes_combined": {"modality": "clinicalLab", "condition": "diabetes"},
 }
 TABULAR_MODEL_MODALITY = {k: v["modality"] for k, v in TABULAR_SLOTS.items()}
 
@@ -202,6 +207,9 @@ class Registry:
             "state": slot.state,
             "reason": slot.reason,
             "simulatedOrFake": slot.fake,
+            "testAuc": self._test_auc(slot),
+            "threshold": slot.predictor.threshold if slot.predictor else None,
+            "source": slot.meta.get("source"),
         } for slot in self.slots.values()]
 
     def versions(self) -> dict:
@@ -221,6 +229,13 @@ class Registry:
     def _tuned_metrics(self, slot: ModelSlot) -> dict | None:
         if not slot.meta:
             return None
+        if "results" not in slot.meta and "test_metrics" in slot.meta:
+            # Simpler comparison.json shape (e.g. a user-provided model verified by
+            # scripts/verify_diabetes_model.py): top-level test_metrics, not a
+            # results[]/selected wrapper. Normalise the field names either way.
+            tm = slot.meta["test_metrics"]
+            return {"sensitivity": tm.get("sens"), "specificity": tm.get("spec"),
+                    "fn": tm.get("FN"), "fp": tm.get("FP")}
         selected = slot.meta.get("selected")
         key = "model" if slot.kind == "tabular" else "arch"
         for r in slot.meta.get("results", []):
@@ -231,6 +246,8 @@ class Registry:
     def _test_auc(self, slot: ModelSlot) -> float | None:
         if not slot.meta:
             return None
+        if "results" not in slot.meta and "test_auc" in slot.meta:
+            return slot.meta["test_auc"]
         selected = slot.meta.get("selected")
         key = "model" if slot.kind == "tabular" else "arch"
         for r in slot.meta.get("results", []):

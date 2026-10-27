@@ -25,6 +25,7 @@ INPUT_LABELS = {
     "ecg": "ECG",
     "clinical": "clinical data",
     "lab": "lab result",
+    "clinicalLab": "combined lab + clinical data",
 }
 
 MODEL_LABELS = {
@@ -34,6 +35,14 @@ MODEL_LABELS = {
     "ecg": "ECG",
     "clinical": "clinical",
     "lab": "lab",
+    "clinicalLab": "combined",
+}
+
+DIABETES_STRATEGY_SUFFIX = {
+    "combined": " Used: combined lab + clinical model.",
+    "fusion": " Used: lab + clinical models (fused).",
+    "lab_only": " Used: lab model only (clinical data incomplete).",
+    "clinical_only": " Used: clinical model only (lab data incomplete).",
 }
 
 DISCLAIMER = (
@@ -159,8 +168,12 @@ def _multi_model_line(condition: str, result: dict, model_meta: dict, drivers_by
 def _condition_line(result: dict, model_meta: dict, drivers_by_model: dict) -> str:
     condition = result["condition"]
     if len(result["contributions"]) == 1:
-        return _single_model_line(condition, result, model_meta, drivers_by_model)
-    return _multi_model_line(condition, result, model_meta, drivers_by_model)
+        line = _single_model_line(condition, result, model_meta, drivers_by_model)
+    else:
+        line = _multi_model_line(condition, result, model_meta, drivers_by_model)
+    if condition == "diabetes":
+        line += DIABETES_STRATEGY_SUFFIX.get(result.get("strategyUsed"), "")
+    return line
 
 
 def build_narrative(

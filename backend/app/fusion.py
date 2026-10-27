@@ -97,6 +97,56 @@ def _condition_result(condition: str, config: dict, runs: list[ModelRun]) -> dic
     }
 
 
+def _diabetes_condition_result(config: dict, runs: list[ModelRun]) -> dict:
+    """The 'best_available' policy (config/fusion.json: diabetes.strategy): when the
+    combined lab+clinical model ran, it is used ALONE for the verdict - diabetes_lab
+    and diabetes_clinical are never fused alongside it (no double-counting on the same
+    underlying data). Otherwise, falls back to the normal late fusion of whichever of
+    lab/clinical ran, exactly like any other condition.
+    """
+    combined_run = next((r for r in runs if r.modality == "clinicalLab"), None)
+    classic_runs = [r for r in runs if r.modality in ("lab", "clinical")]
+
+    if combined_run is not None:
+        ns = norm_score(combined_run.score, combined_run.threshold)
+        t = 0.5  # exactly one model contributes to the verdict - its own threshold, mapped to 0.5
+        if ns >= t:
+            risk_level = "high"
+        elif ns >= 0.6 * t:
+            risk_level = "moderate"
+        else:
+            risk_level = "low"
+        result = {
+            "condition": "diabetes",
+            "fusedScore": ns,
+            "contributions": [{
+                "modality": "clinicalLab", "modelId": combined_run.model_id,
+                "weight": 1.0, "score": combined_run.score, "threshold": combined_run.threshold,
+            }],
+            "riskLevel": risk_level,
+            "fusedThreshold": t,
+            "strategyUsed": "combined",
+        }
+        not_used = [r.model_id for r in classic_runs]
+        if not_used:
+            result["notUsedModelIds"] = not_used
+        return result
+
+    # No combined run (model missing/refused, or its inputs were incomplete) - fall
+    # back to the generic weighted fusion, restricted to lab/clinical components only.
+    classic_config = {**config, "components": [c for c in config.get("components", []) if c["modality"] in ("lab", "clinical")]}
+    result = _condition_result("diabetes", classic_config, classic_runs)
+    if result["riskLevel"] != "not_assessed":
+        modalities = {c["modality"] for c in result["contributions"]}
+        if modalities == {"lab", "clinical"}:
+            result["strategyUsed"] = "fusion"
+        elif modalities == {"lab"}:
+            result["strategyUsed"] = "lab_only"
+        elif modalities == {"clinical"}:
+            result["strategyUsed"] = "clinical_only"
+    return result
+
+
 def simulate_fusion(runs: list[ModelRun], fusion_config: dict, modalities_used: list[str]) -> dict:
     """The Phase 1 rule, ported: overallRisk is the highest level among ASSESSED conditions,
     'incomplete_data' only when nothing could be assessed, never degraded by missing data.
@@ -105,7 +155,10 @@ def simulate_fusion(runs: list[ModelRun], fusion_config: dict, modalities_used: 
     for condition in ALL_CONDITIONS:
         config = fusion_config.get(condition, {"components": []})
         condition_runs = [r for r in runs if r.condition == condition]
-        per_condition.append(_condition_result(condition, config, condition_runs))
+        if condition == "diabetes" and config.get("strategy") == "best_available":
+            per_condition.append(_diabetes_condition_result(config, condition_runs))
+        else:
+            per_condition.append(_condition_result(condition, config, condition_runs))
 
     assessed = [c["condition"] for c in per_condition if c["riskLevel"] != "not_assessed"]
     not_assessed = [c for c in ALL_CONDITIONS if c not in assessed]

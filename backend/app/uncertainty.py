@@ -40,6 +40,20 @@ def build_uncertainty(predictions: list[dict], fusion: dict, fusion_config: dict
     for result in fusion["perCondition"]:
         if result["riskLevel"] == "not_assessed":
             continue
+        if result["condition"] == "diabetes":
+            # diabetes has its own "best_available" strategy (app/fusion.py) - a
+            # single combined-model contribution is the BEST signal, not a partial
+            # one, so it must not trigger the generic "based on X only" message below.
+            strategy = result.get("strategyUsed")
+            if strategy == "combined" and result.get("notUsedModelIds"):
+                messages.append(
+                    f"diabetes: not used: {', '.join(result['notUsedModelIds'])} (combined model available)."
+                )
+            elif strategy == "clinical_only":
+                messages.append("based on clinical data only: low confidence")
+            elif strategy == "lab_only":
+                messages.append("diabetes: based on lab data only.")
+            continue
         total_possible = len(fusion_config.get(result["condition"], {}).get("components", []))
         if total_possible > 1 and len(result["contributions"]) == 1:
             modality = result["contributions"][0]["modality"]

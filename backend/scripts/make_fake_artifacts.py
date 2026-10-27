@@ -27,6 +27,8 @@ TABULAR_TASKS = {
     "diabetes_lab": dict(cat=[], num=["HbA1c_level", "blood_glucose_level"]),
     "diabetes_clinical": dict(cat=["gender", "smoking_history"], num=["age", "bmi", "hypertension", "heart_disease"]),
     "hypertension_clinical": dict(cat=["gender", "smoking_history"], num=["age", "bmi", "heart_disease"]),
+    "diabetes_combined": dict(cat=["gender", "smoking_history"],
+                               num=["age", "bmi", "hypertension", "heart_disease", "HbA1c_level", "blood_glucose_level"]),
 }
 
 

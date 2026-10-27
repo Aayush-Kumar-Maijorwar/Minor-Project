@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 Condition = Literal["diabetes", "hypertension", "malaria", "leukemia", "tuberculosis"]
-ModalityType = Literal["bloodSmearCell", "bloodSmearField", "chestXray", "ecg", "clinical", "lab"]
+ModalityType = Literal["bloodSmearCell", "bloodSmearField", "chestXray", "ecg", "clinical", "lab", "clinicalLab"]
 ModalityStatus = Literal["available", "missing", "not_required", "pending"]
 RiskLevel = Literal["low", "moderate", "high", "not_assessed"]
 OverallRisk = Literal["low", "moderate", "high", "incomplete_data", "review_required"]
@@ -58,6 +58,8 @@ class FusionConditionResult(Camel):
     fused_score: float
     contributions: list[FusionContribution]
     risk_level: RiskLevel
+    strategy_used: Optional[str] = None
+    not_used_model_ids: Optional[list[str]] = None
 
 
 class FusionResult(Camel):
@@ -211,6 +213,9 @@ class HealthModel(Camel):
     state: Literal["loaded", "missing", "error"]
     reason: Optional[str] = None
     simulated_or_fake: bool = False
+    test_auc: Optional[float] = None
+    threshold: Optional[float] = None
+    source: Optional[str] = None
 
 
 class HealthResponse(Camel):

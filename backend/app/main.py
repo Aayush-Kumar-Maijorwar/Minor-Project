@@ -50,6 +50,11 @@ CLINICAL_MODEL_FIELDS = {
     "hypertension_clinical": ["age", "sex", "bmi", "smoking_history", "heart_disease"],
 }
 LAB_MODEL_FIELDS = {"diabetes_lab": ["hba1c", "blood_glucose"]}
+# "best_available" strategy (app/fusion.py): when every one of these is present, the
+# combined model runs ALONGSIDE diabetes_lab/diabetes_clinical (so modality
+# availability for lab/clinical stays accurate) but fusion.py uses it ALONE for the
+# diabetes verdict - never double-counted with the two single-modality models.
+DIABETES_COMBINED_FIELDS = ["age", "sex", "bmi", "smoking_history", "hypertension", "heart_disease", "hba1c", "blood_glucose"]
 MODEL_CONDITION = {"diabetes_clinical": "diabetes", "hypertension_clinical": "hypertension", "diabetes_lab": "diabetes"}
 FIELD_TO_COLUMN = {"sex": "gender", "hba1c": "HbA1c_level", "blood_glucose": "blood_glucose_level"}
 FILE_SLOTS = {
@@ -151,6 +156,15 @@ def _run_analysis(
     if lab_fields:
         provided["lab"] = True
         _run_tabular_group(lab_fields, LAB_MODEL_FIELDS, predictions, issues_by_modality["lab"])
+
+    combined_fields = {**clinical_fields, **lab_fields}
+    if all(f in combined_fields for f in DIABETES_COMBINED_FIELDS):
+        pred = registry.run_tabular("diabetes_combined", _row({f: combined_fields[f] for f in DIABETES_COMBINED_FIELDS}))
+        if pred is not None:
+            predictions.append(_to_prediction(pred))
+        # else: combined model missing/refused - fusion.py's best_available strategy
+        # falls back to diabetes_lab/diabetes_clinical automatically, no issue needed
+        # (clinicalLab isn't a user-facing input modality of its own).
 
     for modality, (slot_id, condition) in FILE_SLOTS.items():
         upload = files.get(modality)
