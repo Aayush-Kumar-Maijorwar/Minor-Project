@@ -60,6 +60,46 @@ export function hasAtLeastOneInput(form: AnalysisFormState): boolean {
   return clinicalFilled || labFilled || filesFilled;
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  age: 'age', sex: 'sex', bmi: 'BMI', smokingHistory: 'smoking history',
+  hypertension: 'known hypertension', heartDisease: 'known heart disease',
+  hba1c: 'HbA1c', bloodGlucose: 'blood glucose',
+};
+
+interface ModelRequirement { label: string; fields: string[]; }
+
+// Mirrors backend/app/main.py's CLINICAL_MODEL_FIELDS / LAB_MODEL_FIELDS - each model
+// needs ALL of its own fields, so a half-filled section is otherwise silently ignored.
+const MODEL_REQUIREMENTS: ModelRequirement[] = [
+  { label: 'Diabetes (lab model)', fields: ['hba1c', 'bloodGlucose'] },
+  { label: 'Diabetes (clinical model)', fields: ['age', 'sex', 'bmi', 'smokingHistory', 'hypertension', 'heartDisease'] },
+  { label: 'Hypertension (clinical model)', fields: ['age', 'sex', 'bmi', 'smokingHistory', 'heartDisease'] },
+];
+
+export interface MissingFieldsHint {
+  label: string;
+  missing: string[];
+}
+
+/** For a section that's PARTIALLY filled in (some but not all of a model's own
+ * required fields), lists what's still missing - so a half-filled section is
+ * reported, not silently dropped. A section with nothing filled in yet, or a model
+ * whose fields are all present, produces no hint. Hints only: the backend decides. */
+export function missingFieldsHints(form: AnalysisFormState): MissingFieldsHint[] {
+  const values: Record<string, unknown> = { ...(form.clinical ?? {}), ...(form.lab ?? {}) };
+  const isFilled = (f: string) => values[f] !== undefined && values[f] !== null && (values[f] as unknown) !== '';
+
+  const hints: MissingFieldsHint[] = [];
+  for (const req of MODEL_REQUIREMENTS) {
+    const missing = req.fields.filter(f => !isFilled(f));
+    const presentCount = req.fields.length - missing.length;
+    if (missing.length > 0 && presentCount > 0) {
+      hints.push({ label: req.label, missing: missing.map(f => FIELD_LABELS[f] ?? f) });
+    }
+  }
+  return hints;
+}
+
 /** What each filled-in section lets the backend assess, for the "With this you can
  * assess: ..." hint. Mirrors backend/app/main.py's CLINICAL_MODEL_FIELDS / FILE_SLOTS. */
 export function conditionsAssessableBy(form: AnalysisFormState): string[] {

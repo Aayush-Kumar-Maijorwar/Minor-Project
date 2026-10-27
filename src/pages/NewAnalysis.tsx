@@ -8,15 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePatients, useCreatePatient } from '@/features/hooks';
 import { inferenceService } from '@/services/inference';
+import { useBackendStatus } from '@/features/useBackendStatus';
 import {
   clinicalFormSchema, labFormSchema, SMOKING_HISTORY_VALUES,
-  parseEcgText, validateEcgValues, hasAtLeastOneInput, conditionsAssessableBy
+  parseEcgText, validateEcgValues, hasAtLeastOneInput, conditionsAssessableBy, missingFieldsHints
 } from '@/features/analysisForm';
 import { ClinicalValues, LabValues, AnalysisFiles } from '@/services/inference/InferenceService';
 import { fetchDemoCases, loadDemoCaseFiles, DemoCase } from '@/features/demoCases';
 import { loadReplay, shouldAttemptReplay } from '@/features/replay';
 import { LabReportCard } from '@/components/LabReportCard';
 import { z } from 'zod';
+import { ModalityType } from '@/types';
 
 const formSchema = clinicalFormSchema.merge(labFormSchema);
 type FormValues = z.infer<typeof formSchema>;
@@ -28,13 +30,16 @@ interface FileSlotDef {
   label: string;
   help: string;
   accept: string;
+  /** /health modality this slot's model is reported under - used to disable the
+   * slot when that model isn't loaded ("model not available yet"). */
+  modality: ModalityType;
 }
 
 const FILE_SLOTS: FileSlotDef[] = [
-  { key: 'chestXray', label: 'Chest X-ray (TB)', help: 'A frontal chest X-ray image, as in standard TB screening datasets.', accept: 'image/*' },
-  { key: 'smearCell', label: 'Blood-smear cell image (malaria)', help: 'Single stained cell crop, as in the NIH malaria dataset.', accept: 'image/*' },
-  { key: 'smearField', label: 'Blood-smear field image (leukemia)', help: 'A wider blood-smear field image, not a single-cell crop.', accept: 'image/*' },
-  { key: 'ecg', label: 'ECG (one heartbeat)', help: 'A single heartbeat as exactly 187 numbers (.csv, .txt, or .npy).', accept: '.csv,.txt,.npy' }
+  { key: 'chestXray', label: 'Chest X-ray (TB)', help: 'A frontal chest X-ray image, as in standard TB screening datasets.', accept: 'image/*', modality: 'chestXray' },
+  { key: 'smearCell', label: 'Blood-smear cell image (malaria)', help: 'Single stained cell crop, as in the NIH malaria dataset.', accept: 'image/*', modality: 'bloodSmearCell' },
+  { key: 'smearField', label: 'Blood-smear field image (leukemia)', help: 'A wider blood-smear field image, not a single-cell crop.', accept: 'image/*', modality: 'bloodSmearField' },
+  { key: 'ecg', label: 'ECG (one heartbeat)', help: 'A single heartbeat as exactly 187 numbers (.csv, .txt, or .npy).', accept: '.csv,.txt,.npy', modality: 'ecg' }
 ];
 
 export default function NewAnalysis() {
@@ -42,6 +47,8 @@ export default function NewAnalysis() {
   const [step, setStep] = useState(0);
   const { data: patients = [] } = usePatients();
   const createPatient = useCreatePatient();
+  const { data: health } = useBackendStatus();
+  const [lastSubmission, setLastSubmission] = useState<FormValues | null>(null);
 
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [showCreatePatient, setShowCreatePatient] = useState(false);
@@ -92,6 +99,20 @@ export default function NewAnalysis() {
     () => conditionsAssessableBy({ clinical: clinicalValues, lab: labValues, files }),
     [clinicalValues, labValues, files]
   );
+  const missingHints = useMemo(
+    () => missingFieldsHints({ clinical: clinicalValues, lab: labValues, files }),
+    [clinicalValues, labValues, files]
+  );
+  const canSubmit = useMemo(
+    () => hasAtLeastOneInput({ clinical: clinicalValues, lab: labValues, files }),
+    [clinicalValues, labValues, files]
+  );
+
+  function isSlotDisabled(modality: ModalityType): boolean {
+    if (!health) return false; // don't block uploads just because /health hasn't loaded yet
+    const model = health.models.find(m => m.modality === modality);
+    return !!model && model.state !== 'loaded';
+  }
 
   const handleCreatePatient = async () => {
     const age = Number(newPatient.age);
@@ -106,6 +127,22 @@ export default function NewAnalysis() {
     setFormError(null);
     try {
       setSelectedDemoCase(demoCase);
+      if (!selectedPatientId) {
+        // Best-effort: lets a fresh demo case run against a live backend without
+        // picking a patient first. If the backend is unreachable, this fails
+        // silently - the demo case (files/values) still loads, and submitting will
+        // fall back to the recorded replay, which carries its own patient id.
+        try {
+          const sex = demoCase.patient.sex === 'other' ? 'other' : demoCase.patient.sex;
+          const p = await createPatient.mutateAsync({
+            name: demoCase.patient.name, age: demoCase.patient.age, sex,
+            mrn: `DEMO-${demoCase.id}`,
+          });
+          setSelectedPatientId(p.id);
+        } catch {
+          // backend unreachable - proceed without a patient id (see above)
+        }
+      }
       if (demoCase.clinical) {
         reset({ ...watch(), ...demoCase.clinical } as FormValues);
       }
@@ -161,6 +198,7 @@ export default function NewAnalysis() {
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
+    setLastSubmission(values);
     const clinical: Partial<ClinicalValues> = {
       age: values.age, sex: values.sex, bmi: values.bmi,
       smokingHistory: values.smokingHistory, hypertension: values.hypertension, heartDisease: values.heartDisease
@@ -282,8 +320,20 @@ export default function NewAnalysis() {
                     ))}
                   </div>
                   {selectedDemoCase && (
-                    <div className="mt-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-md">
-                      {selectedDemoCase.note}
+                    <div className="mt-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-md space-y-1">
+                      <div>{selectedDemoCase.note}</div>
+                      {selectedDemoCase.groundTruth && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pt-1 text-amber-700">
+                          {Object.entries(selectedDemoCase.groundTruth).map(([k, v]) => (
+                            <span key={k}><span className="font-medium capitalize">{k}:</span> ground truth {v}</span>
+                          ))}
+                        </div>
+                      )}
+                      {selectedDemoCase.hardCase && (
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[11px] font-medium">
+                          hard case: {selectedDemoCase.hardCase}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -294,7 +344,14 @@ export default function NewAnalysis() {
           {step === 1 && (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">{error}</div>
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm flex items-center justify-between">
+                  <span>{error}</span>
+                  {lastSubmission && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => onSubmit(lastSubmission)}>
+                      Retry
+                    </Button>
+                  )}
+                </div>
               )}
               {formError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">{formError}</div>
@@ -302,7 +359,19 @@ export default function NewAnalysis() {
 
               {assessable.length > 0 && (
                 <div className="bg-teal-50 border border-teal-200 text-teal-800 text-sm px-4 py-2 rounded-md">
-                  With this you can assess: {assessable.join(', ')}
+                  With what you entered you can assess: {assessable.join(', ')}
+                </div>
+              )}
+              {missingHints.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 text-slate-600 text-sm px-4 py-2 rounded-md space-y-0.5">
+                  {missingHints.map(h => (
+                    <div key={h.label}>Not possible yet: {h.label} (add {h.missing.join(', ')})</div>
+                  ))}
+                </div>
+              )}
+              {!canSubmit && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-md">
+                  Provide at least one input (clinical, lab, or a file) before running the analysis.
                 </div>
               )}
 
@@ -377,21 +446,25 @@ export default function NewAnalysis() {
               <section className="space-y-3">
                 <h3 className="font-semibold text-slate-900">Files</h3>
                 <div className="space-y-3">
-                  {FILE_SLOTS.map(slot => (
-                    <div key={slot.key} className="p-4 border border-slate-200 rounded-md">
+                  {FILE_SLOTS.map(slot => {
+                    const disabled = isSlotDisabled(slot.modality);
+                    return (
+                    <div key={slot.key} className={`p-4 border border-slate-200 rounded-md ${disabled ? 'opacity-60' : ''}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-medium text-sm">{slot.label}</div>
-                          <div className="text-xs text-slate-500">{slot.help}</div>
+                          <div className="text-xs text-slate-500">{disabled ? 'Model not available yet.' : slot.help}</div>
                         </div>
-                        {files[slot.key] ? (
+                        {disabled ? (
+                          <Badge variant="outline" className="text-xs text-slate-400">Not available</Badge>
+                        ) : files[slot.key] ? (
                           <Button type="button" variant="outline" size="sm" onClick={() => removeFile(slot.key)}>
                             <X className="w-3.5 h-3.5 mr-1" /> Remove
                           </Button>
                         ) : (
                           <label className="inline-flex items-center px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50">
                             <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload
-                            <input type="file" accept={slot.accept} className="hidden"
+                            <input type="file" accept={slot.accept} className="hidden" disabled={disabled}
                               onChange={e => handleFileChange(slot.key, e.target.files)} />
                           </label>
                         )}
@@ -404,7 +477,8 @@ export default function NewAnalysis() {
                       )}
                       {fileErrors[slot.key] && <FieldError msg={fileErrors[slot.key]} />}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
 
@@ -429,7 +503,13 @@ export default function NewAnalysis() {
             <Button onClick={() => setStep(1)} disabled={!selectedPatientId && !selectedDemoCase}>Next</Button>
           )}
           {step === 1 && (
-            <Button onClick={handleSubmit(onSubmit)} disabled={isRunning}>Run Analysis</Button>
+            <Button
+              onClick={handleSubmit(onSubmit)}
+              disabled={isRunning || !canSubmit}
+              title={!canSubmit ? 'Provide at least one input before running the analysis.' : undefined}
+            >
+              Run Analysis
+            </Button>
           )}
         </CardFooter>
       </Card>

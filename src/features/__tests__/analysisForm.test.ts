@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   clinicalFormSchema, labFormSchema, parseEcgText, validateEcgValues,
-  hasAtLeastOneInput, conditionsAssessableBy, ECG_REQUIRED_LENGTH
+  hasAtLeastOneInput, conditionsAssessableBy, missingFieldsHints, ECG_REQUIRED_LENGTH
 } from '../analysisForm';
 
 describe('clinicalFormSchema / labFormSchema ranges', () => {
@@ -98,5 +98,29 @@ describe('conditionsAssessableBy', () => {
     const file = new File(['x'], 'x.png');
     const result = conditionsAssessableBy({ files: { chestXray: file, ecg: file } });
     expect(result).toEqual(expect.arrayContaining(['Tuberculosis', 'Hypertension']));
+  });
+});
+
+describe('missingFieldsHints', () => {
+  it('produces no hint when a section is empty', () => {
+    expect(missingFieldsHints({})).toEqual([]);
+    expect(missingFieldsHints({ clinical: {}, lab: {} })).toEqual([]);
+  });
+
+  it('produces no hint once a model has every field it needs', () => {
+    expect(missingFieldsHints({ lab: { hba1c: 7, bloodGlucose: 150 } })).toEqual([]);
+  });
+
+  it('names the missing fields for a half-filled lab section', () => {
+    const hints = missingFieldsHints({ lab: { hba1c: 7 } });
+    expect(hints).toEqual([{ label: 'Diabetes (lab model)', missing: ['blood glucose'] }]);
+  });
+
+  it('names the missing fields for a half-filled clinical section, for both clinical models it could feed', () => {
+    const hints = missingFieldsHints({ clinical: { age: 50, bmi: 25 } });
+    const labels = hints.map(h => h.label);
+    expect(labels).toEqual(expect.arrayContaining(['Diabetes (clinical model)', 'Hypertension (clinical model)']));
+    const diabetesHint = hints.find(h => h.label === 'Diabetes (clinical model)')!;
+    expect(diabetesHint.missing).toEqual(expect.arrayContaining(['sex', 'smoking history', 'known hypertension', 'known heart disease']));
   });
 });

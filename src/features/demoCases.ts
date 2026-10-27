@@ -9,6 +9,10 @@ export interface DemoCase {
   lab?: LabValues;
   files?: { chestXray?: string; smearCell?: string; smearField?: string; ecg?: string };
   groundTruth?: Record<string, string>;
+  /** Set when this case's image disagrees with its own ground truth (a model false
+   * alarm or miss) - see backend/scripts/sample_audit.py. Shown as a tag so the
+   * mismatch is explained, not mistaken for a UI bug. */
+  hardCase?: string;
   note: string;
 }
 
