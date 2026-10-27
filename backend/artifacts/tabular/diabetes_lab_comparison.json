@@ -1,0 +1,145 @@
+{
+  "task": "diabetes_lab",
+  "features": [
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "categorical": [],
+  "numeric": [
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "selected": "random_forest",
+  "threshold": 0.4373281302903021,
+  "target_sensitivity": 0.95,
+  "n_train": 67302,
+  "n_val": 14422,
+  "n_test": 14422,
+  "results": [
+    {
+      "model": "logistic_regression",
+      "train_seconds": 0.0,
+      "val_auc": 0.9167804301379374,
+      "test_auc": 0.92945793576775,
+      "val_spec_at_target": 0.6299338352726443,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.8089622641509434,
+        "specificity": 0.8450950570342205,
+        "precision": 0.3356164383561644,
+        "accuracy": 0.841908195811954,
+        "f1": 0.47441217150760717,
+        "tp": 1029,
+        "fp": 2037,
+        "tn": 11113,
+        "fn": 243
+      },
+      "tuned": {
+        "threshold": 0.2529727625184648,
+        "sensitivity": 0.9544025157232704,
+        "specificity": 0.6307984790874525,
+        "precision": 0.20003295435821386,
+        "accuracy": 0.6593398973790043,
+        "f1": 0.3307451300912682,
+        "tp": 1214,
+        "fp": 4855,
+        "tn": 8295,
+        "fn": 58
+      }
+    },
+    {
+      "model": "random_forest",
+      "train_seconds": 2.7,
+      "val_auc": 0.9371194927771173,
+      "test_auc": 0.9456399909127866,
+      "val_spec_at_target": 0.6935888660734657,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.7948113207547169,
+        "specificity": 0.883041825095057,
+        "precision": 0.3966261278932915,
+        "accuracy": 0.8752600194147829,
+        "f1": 0.5291808427113321,
+        "tp": 1011,
+        "fp": 1538,
+        "tn": 11612,
+        "fn": 261
+      },
+      "tuned": {
+        "threshold": 0.4373281302903021,
+        "sensitivity": 0.9488993710691824,
+        "specificity": 0.6924714828897338,
+        "precision": 0.2298609788611693,
+        "accuracy": 0.7150880599084731,
+        "f1": 0.3700751188103633,
+        "tp": 1207,
+        "fp": 4044,
+        "tn": 9106,
+        "fn": 65
+      }
+    },
+    {
+      "model": "hist_gradient_boosting",
+      "train_seconds": 0.7,
+      "val_auc": 0.9367795017491526,
+      "test_auc": 0.9459157160963244,
+      "val_spec_at_target": 0.6865160848733745,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.8191823899371069,
+        "specificity": 0.8623574144486692,
+        "precision": 0.3653576437587658,
+        "accuracy": 0.8585494383580641,
+        "f1": 0.5053346265761397,
+        "tp": 1042,
+        "fp": 1810,
+        "tn": 11340,
+        "fn": 230
+      },
+      "tuned": {
+        "threshold": 0.4250796789290126,
+        "sensitivity": 0.9567610062893082,
+        "specificity": 0.6865399239543726,
+        "precision": 0.22794530811013297,
+        "accuracy": 0.7103730411870753,
+        "f1": 0.3681742550294963,
+        "tp": 1217,
+        "fp": 4122,
+        "tn": 9028,
+        "fn": 55
+      }
+    },
+    {
+      "model": "xgboost",
+      "train_seconds": 2.9,
+      "val_auc": 0.9373379688251346,
+      "test_auc": 0.945607109548748,
+      "val_spec_at_target": 0.6920678378583923,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.8136792452830188,
+        "specificity": 0.8711787072243345,
+        "precision": 0.3792598021253206,
+        "accuracy": 0.8661073360144224,
+        "f1": 0.5173706573356661,
+        "tp": 1035,
+        "fp": 1694,
+        "tn": 11456,
+        "fn": 237
+      },
+      "tuned": {
+        "threshold": 0.44514793157577515,
+        "sensitivity": 0.9504716981132075,
+        "specificity": 0.6919391634980988,
+        "precision": 0.22984790874524716,
+        "accuracy": 0.7147413673554293,
+        "f1": 0.37017758726270666,
+        "tp": 1209,
+        "fp": 4051,
+        "tn": 9099,
+        "fn": 63
+      }
+    }
+  ],
+  "note": "Held-out public-dataset split; not clinical validation."
+}
