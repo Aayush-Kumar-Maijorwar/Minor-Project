@@ -57,6 +57,9 @@ export interface HealthModelStatus {
   state: 'loaded' | 'missing' | 'error';
   reason?: string;
   simulatedOrFake: boolean;
+  testAuc?: number | null;
+  threshold?: number | null;
+  source?: string | null;
 }
 
 export interface HealthStatus {
