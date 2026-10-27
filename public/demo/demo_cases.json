@@ -1,0 +1,70 @@
+[
+  {
+    "id": "full-workup-concerning",
+    "title": "1. Full work-up (concerning)",
+    "description": "Complete lab + clinical data, a flagged TB chest X-ray, and a flagged malaria blood smear - all from real held-out model test samples.",
+    "patient": { "name": "Demo Patient A", "age": 60, "sex": "male" },
+    "clinical": { "age": 60, "sex": "Male", "bmi": 32, "smokingHistory": "former", "hypertension": true, "heartDisease": false },
+    "lab": { "hba1c": 9.0, "bloodGlucose": 240 },
+    "files": {
+      "chestXray": "/demo/images/tb_xray_positive.png",
+      "smearCell": "/demo/images/malaria_cell_positive.png"
+    },
+    "groundTruth": { "tuberculosis": "positive", "malaria": "positive", "diabetes": "positive", "hypertension": "positive" },
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
+  },
+  {
+    "id": "healthy-screening",
+    "title": "2. Healthy screening",
+    "description": "Complete lab + clinical data, an unflagged TB chest X-ray, and an unflagged malaria blood smear - all from real held-out model test samples, with negative tabular values.",
+    "patient": { "name": "Demo Patient B", "age": 30, "sex": "female" },
+    "clinical": { "age": 30, "sex": "Female", "bmi": 22, "smokingHistory": "never", "hypertension": false, "heartDisease": false },
+    "lab": { "hba1c": 4.5, "bloodGlucose": 80 },
+    "files": {
+      "chestXray": "/demo/images/tb_xray_negative.png",
+      "smearCell": "/demo/images/malaria_cell_negative.png"
+    },
+    "groundTruth": { "tuberculosis": "negative", "malaria": "negative", "diabetes": "negative", "hypertension": "negative" },
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
+  },
+  {
+    "id": "partial-xray-lab",
+    "title": "3. Partial: chest X-ray + lab only",
+    "description": "Only a chest X-ray and lab values are provided - malaria, leukemia, and hypertension should all show as not assessed.",
+    "patient": { "name": "Demo Patient C", "age": 46, "sex": "female" },
+    "lab": { "hba1c": 7.8, "bloodGlucose": 180 },
+    "files": {
+      "chestXray": "/demo/images/tb_xray_positive.png"
+    },
+    "groundTruth": { "tuberculosis": "positive", "diabetes": "positive" },
+    "note": "Composite demo case: images come from different public datasets; values are synthetic."
+  },
+  {
+    "id": "lab-only-diabetes",
+    "title": "4. Lab report only",
+    "description": "Only lab values are provided - diabetes should be assessed via the lab-only model, all four other conditions not assessed.",
+    "patient": { "name": "Demo Patient D", "age": 61, "sex": "male" },
+    "lab": { "hba1c": 7.9, "bloodGlucose": 195 },
+    "groundTruth": { "diabetes": "positive" },
+    "note": "Composite demo case: values are synthetic."
+  },
+  {
+    "id": "borderline-values",
+    "title": "5. Borderline values",
+    "description": "Complete lab + clinical values deliberately chosen to land diabetes in the moderate (borderline) band of the combined model.",
+    "patient": { "name": "Demo Patient E", "age": 50, "sex": "female" },
+    "clinical": { "age": 50, "sex": "Female", "bmi": 29, "smokingHistory": "former", "hypertension": false, "heartDisease": false },
+    "lab": { "hba1c": 6.1, "bloodGlucose": 155 },
+    "groundTruth": { "diabetes": "borderline", "hypertension": "positive" },
+    "note": "Composite demo case: values are synthetic, deliberately chosen near the flag thresholds."
+  },
+  {
+    "id": "clinical-only",
+    "title": "6. Clinical only",
+    "description": "Only clinical values are provided (no lab) - diabetes is assessed via the clinical-only model with a low-confidence caveat, and hypertension is assessed from the same clinical profile.",
+    "patient": { "name": "Demo Patient F", "age": 65, "sex": "male" },
+    "clinical": { "age": 65, "sex": "Male", "bmi": 32, "smokingHistory": "former", "hypertension": true, "heartDisease": true },
+    "groundTruth": { "diabetes": "positive", "hypertension": "positive" },
+    "note": "Composite demo case: values are synthetic."
+  }
+]

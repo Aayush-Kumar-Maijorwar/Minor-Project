@@ -1,0 +1,152 @@
+{
+  "task": "hypertension_clinical",
+  "features": [
+    "gender",
+    "smoking_history",
+    "age",
+    "bmi",
+    "heart_disease"
+  ],
+  "categorical": [
+    "gender",
+    "smoking_history"
+  ],
+  "numeric": [
+    "age",
+    "bmi",
+    "heart_disease"
+  ],
+  "selected": "logistic_regression",
+  "threshold": 0.3023347173976611,
+  "target_sensitivity": 0.95,
+  "n_train": 67302,
+  "n_val": 14422,
+  "n_test": 14422,
+  "results": [
+    {
+      "model": "logistic_regression",
+      "train_seconds": 0.1,
+      "val_auc": 0.810605118601924,
+      "test_auc": 0.8002076708425878,
+      "val_spec_at_target": 0.5094339622641509,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.7882037533512064,
+        "specificity": 0.6775915207096144,
+        "precision": 0.1705666215432218,
+        "accuracy": 0.6861739009846068,
+        "f1": 0.28044515103338635,
+        "tp": 882,
+        "fp": 4289,
+        "tn": 9014,
+        "fn": 237
+      },
+      "tuned": {
+        "threshold": 0.3023347173976611,
+        "sensitivity": 0.9481680071492404,
+        "specificity": 0.4964293768322935,
+        "precision": 0.13672680412371135,
+        "accuracy": 0.5314796838163917,
+        "f1": 0.23899087735105304,
+        "tp": 1061,
+        "fp": 6699,
+        "tn": 6604,
+        "fn": 58
+      }
+    },
+    {
+      "model": "random_forest",
+      "train_seconds": 2.8,
+      "val_auc": 0.7791862882158788,
+      "test_auc": 0.7690722600350113,
+      "val_spec_at_target": 0.4609486581973991,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.44235924932975873,
+        "specificity": 0.8367285574682403,
+        "precision": 0.1856017997750281,
+        "accuracy": 0.8061295243378173,
+        "f1": 0.26148969889064977,
+        "tp": 495,
+        "fp": 2172,
+        "tn": 11131,
+        "fn": 624
+      },
+      "tuned": {
+        "threshold": 0.12839636272330288,
+        "sensitivity": 0.9436997319034852,
+        "specificity": 0.450199203187251,
+        "precision": 0.12616487455197134,
+        "accuracy": 0.48848980723894053,
+        "f1": 0.22257350616503319,
+        "tp": 1056,
+        "fp": 7314,
+        "tn": 5989,
+        "fn": 63
+      }
+    },
+    {
+      "model": "hist_gradient_boosting",
+      "train_seconds": 0.7,
+      "val_auc": 0.8100068742179343,
+      "test_auc": 0.8008628476970093,
+      "val_spec_at_target": 0.49635420581823647,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.8453976764968723,
+        "specificity": 0.6242952717432159,
+        "precision": 0.1591520861372813,
+        "accuracy": 0.6414505616419359,
+        "f1": 0.2678748407192411,
+        "tp": 946,
+        "fp": 4998,
+        "tn": 8305,
+        "fn": 173
+      },
+      "tuned": {
+        "threshold": 0.2904715058872199,
+        "sensitivity": 0.9472743521000894,
+        "specificity": 0.48913778846876643,
+        "precision": 0.134928716904277,
+        "accuracy": 0.52468450977673,
+        "f1": 0.2362116991643454,
+        "tp": 1060,
+        "fp": 6796,
+        "tn": 6507,
+        "fn": 59
+      }
+    },
+    {
+      "model": "xgboost",
+      "train_seconds": 0.4,
+      "val_auc": 0.8092881815513673,
+      "test_auc": 0.7994176362484706,
+      "val_spec_at_target": 0.4961286927760655,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.8355674709562109,
+        "specificity": 0.6296324137412613,
+        "precision": 0.15950187649266462,
+        "accuracy": 0.6456108722784635,
+        "f1": 0.26786993267440196,
+        "tp": 935,
+        "fp": 4927,
+        "tn": 8376,
+        "fn": 184
+      },
+      "tuned": {
+        "threshold": 0.28545641899108887,
+        "sensitivity": 0.9490616621983914,
+        "specificity": 0.49116740584830487,
+        "precision": 0.13561486400204317,
+        "accuracy": 0.526695326584385,
+        "f1": 0.23731843575418995,
+        "tp": 1062,
+        "fp": 6769,
+        "tn": 6534,
+        "fn": 57
+      }
+    }
+  ],
+  "note": "Held-out public-dataset split; not clinical validation."
+}

@@ -1,0 +1,162 @@
+{
+  "task": "hypertension_risk_no_bp",
+  "selected": "logreg_balanced",
+  "features": [
+    "Age",
+    "Gender",
+    "BMI",
+    "Smoking_Status",
+    "Alcohol_Intake",
+    "Physical_Activity_Level",
+    "Family_History",
+    "Stress_Level",
+    "Salt_Intake",
+    "Sleep_Duration",
+    "Heart_Rate",
+    "Diabetes",
+    "Cholesterol",
+    "LDL",
+    "HDL",
+    "Triglycerides",
+    "Glucose"
+  ],
+  "numeric": [
+    "Age",
+    "BMI",
+    "Alcohol_Intake",
+    "Stress_Level",
+    "Salt_Intake",
+    "Sleep_Duration",
+    "Heart_Rate",
+    "Cholesterol",
+    "LDL",
+    "HDL",
+    "Triglycerides",
+    "Glucose"
+  ],
+  "categorical": [
+    "Gender",
+    "Smoking_Status",
+    "Physical_Activity_Level",
+    "Family_History",
+    "Diabetes"
+  ],
+  "numeric_ranges": {
+    "Age": [
+      18.0,
+      89.0
+    ],
+    "BMI": [
+      15.0,
+      40.0
+    ],
+    "Alcohol_Intake": [
+      0.0,
+      30.0
+    ],
+    "Stress_Level": [
+      1.0,
+      9.0
+    ],
+    "Salt_Intake": [
+      2.0,
+      15.0
+    ],
+    "Sleep_Duration": [
+      4.0,
+      10.0
+    ],
+    "Heart_Rate": [
+      50.0,
+      99.0
+    ],
+    "Cholesterol": [
+      150.0,
+      299.0
+    ],
+    "LDL": [
+      70.0,
+      189.0
+    ],
+    "HDL": [
+      30.0,
+      99.0
+    ],
+    "Triglycerides": [
+      50.0,
+      249.0
+    ],
+    "Glucose": [
+      70.0,
+      199.0
+    ]
+  },
+  "categories": {
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "Smoking_Status": [
+      "Current",
+      "Former",
+      "Never"
+    ],
+    "Physical_Activity_Level": [
+      "High",
+      "Low",
+      "Moderate"
+    ],
+    "Family_History": [
+      "No",
+      "Yes"
+    ],
+    "Diabetes": [
+      "No",
+      "Yes"
+    ]
+  },
+  "reference_values": {
+    "Age": 54.0,
+    "BMI": 27.5,
+    "Alcohol_Intake": 15.0,
+    "Stress_Level": 5.0,
+    "Salt_Intake": 8.5,
+    "Sleep_Duration": 7.0,
+    "Heart_Rate": 75.0,
+    "Cholesterol": 225.0,
+    "LDL": 130.0,
+    "HDL": 65.0,
+    "Triglycerides": 149.0,
+    "Glucose": 134.0,
+    "Gender": "Male",
+    "Smoking_Status": "Current",
+    "Physical_Activity_Level": "Low",
+    "Family_History": "No",
+    "Diabetes": "No"
+  },
+  "target": "Hypertension",
+  "target_rule": "positive = ['high']",
+  "threshold": 0.4926504938783679,
+  "target_sensitivity": 0.95,
+  "test_metrics": {
+    "sens": 0.9503120403863736,
+    "spec": 0.049796747967479675,
+    "FN": 1250,
+    "FP": 9350,
+    "acc": 0.6971168957339201
+  },
+  "test_auc": 0.5013,
+  "sklearn_version": "1.9.1",
+  "excluded": {
+    "blood_pressure": [
+      "Systolic_BP",
+      "Diastolic_BP"
+    ],
+    "socio_demographic": [
+      "Country",
+      "Education_Level",
+      "Employment_Status"
+    ]
+  },
+  "note": "Risk model without blood pressure. Public dataset; not clinical validation."
+}

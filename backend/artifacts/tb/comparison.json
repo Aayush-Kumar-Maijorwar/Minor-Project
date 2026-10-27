@@ -1,0 +1,153 @@
+{
+  "disease": "tb",
+  "split": "image-level (stratified; no patient ids available)",
+  "n_train": 2940,
+  "n_val": 630,
+  "n_test": 630,
+  "target_sensitivity": 0.95,
+  "selected": "efficientnet_b0",
+  "epochs": 5,
+  "results": [
+    {
+      "arch": "resnet18",
+      "params_m": 11.18,
+      "train_seconds": 227.0,
+      "infer_ms_per_img": 142.57,
+      "val_auc": 0.9999818594104309,
+      "test_auc": 0.9999637188208617,
+      "val_spec_at_target": 1.0,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9809523809523809,
+        "specificity": 0.9980952380952381,
+        "precision": 0.9903846153846154,
+        "npv": 0.9961977186311787,
+        "accuracy": 0.9952380952380953,
+        "f1": 0.9856459330143541,
+        "tp": 103,
+        "fp": 1,
+        "tn": 524,
+        "fn": 2
+      },
+      "tuned": {
+        "threshold": 0.9914886951446533,
+        "sensitivity": 0.9714285714285714,
+        "specificity": 1.0,
+        "precision": 1.0,
+        "npv": 0.9943181818181818,
+        "accuracy": 0.9952380952380953,
+        "f1": 0.9855072463768116,
+        "tp": 102,
+        "fp": 0,
+        "tn": 525,
+        "fn": 3
+      }
+    },
+    {
+      "arch": "efficientnet_b0",
+      "params_m": 4.01,
+      "train_seconds": 179.8,
+      "infer_ms_per_img": 7.25,
+      "val_auc": 1.0,
+      "test_auc": 0.9997460317460317,
+      "val_spec_at_target": 1.0,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9904761904761905,
+        "specificity": 0.9904761904761905,
+        "precision": 0.9541284403669725,
+        "npv": 0.9980806142034548,
+        "accuracy": 0.9904761904761905,
+        "f1": 0.9719626168224299,
+        "tp": 104,
+        "fp": 5,
+        "tn": 520,
+        "fn": 1
+      },
+      "tuned": {
+        "threshold": 0.9784671068191528,
+        "sensitivity": 0.9904761904761905,
+        "specificity": 1.0,
+        "precision": 1.0,
+        "npv": 0.9980988593155894,
+        "accuracy": 0.9984126984126984,
+        "f1": 0.9952153110047847,
+        "tp": 104,
+        "fp": 0,
+        "tn": 525,
+        "fn": 1
+      }
+    },
+    {
+      "arch": "mobilenet_v3_small",
+      "params_m": 1.52,
+      "train_seconds": 161.5,
+      "infer_ms_per_img": 7.08,
+      "val_auc": 1.0,
+      "test_auc": 0.9997823129251701,
+      "val_spec_at_target": 1.0,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9428571428571428,
+        "specificity": 1.0,
+        "precision": 1.0,
+        "npv": 0.9887005649717514,
+        "accuracy": 0.9904761904761905,
+        "f1": 0.9705882352941176,
+        "tp": 99,
+        "fp": 0,
+        "tn": 525,
+        "fn": 6
+      },
+      "tuned": {
+        "threshold": 0.0948452427983284,
+        "sensitivity": 0.9809523809523809,
+        "specificity": 0.9980952380952381,
+        "precision": 0.9903846153846154,
+        "npv": 0.9961977186311787,
+        "accuracy": 0.9952380952380953,
+        "f1": 0.9856459330143541,
+        "tp": 103,
+        "fp": 1,
+        "tn": 524,
+        "fn": 2
+      }
+    },
+    {
+      "arch": "densenet121",
+      "params_m": 6.95,
+      "train_seconds": 143.9,
+      "infer_ms_per_img": 7.4,
+      "val_auc": 1.0,
+      "test_auc": 0.999546485260771,
+      "val_spec_at_target": 1.0,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9809523809523809,
+        "specificity": 1.0,
+        "precision": 1.0,
+        "npv": 0.9962049335863378,
+        "accuracy": 0.9968253968253968,
+        "f1": 0.9903846153846154,
+        "tp": 103,
+        "fp": 0,
+        "tn": 525,
+        "fn": 2
+      },
+      "tuned": {
+        "threshold": 0.6524628400802612,
+        "sensitivity": 0.9809523809523809,
+        "specificity": 1.0,
+        "precision": 1.0,
+        "npv": 0.9962049335863378,
+        "accuracy": 0.9968253968253968,
+        "f1": 0.9903846153846154,
+        "tp": 103,
+        "fp": 0,
+        "tn": 525,
+        "fn": 2
+      }
+    }
+  ],
+  "note": "Held-out public-dataset split; not clinical validation."
+}

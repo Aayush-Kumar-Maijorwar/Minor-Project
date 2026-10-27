@@ -1,0 +1,19 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic>=2
+numpy
+pandas
+scikit-learn
+joblib
+pillow
+httpx
+python-dotenv
+pytest
+xgboost
+matplotlib  # only used by training/*.py, pulled in here so tests/test_training_contract.py can run them
+
+# torch is NOT pinned here - install separately (CPU wheels):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# The app imports torch lazily; image/ECG predictors report "torch not installed"
+# and the rest of the app still runs if you skip this.

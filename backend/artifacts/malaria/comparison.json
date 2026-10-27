@@ -1,0 +1,118 @@
+{
+  "disease": "malaria",
+  "split": "patient-level (grouped)",
+  "n_train": 5530,
+  "n_val": 1128,
+  "n_test": 1342,
+  "target_sensitivity": 0.95,
+  "selected": "resnet18",
+  "epochs": 4,
+  "results": [
+    {
+      "arch": "resnet18",
+      "params_m": 11.18,
+      "train_seconds": 393.5,
+      "infer_ms_per_img": 54.06,
+      "val_auc": 0.9930437653272968,
+      "test_auc": 0.994512690310029,
+      "val_spec_at_target": 0.9859649122807017,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9483240223463687,
+        "specificity": 0.9824281150159745,
+        "precision": 0.9840579710144928,
+        "npv": 0.9432515337423313,
+        "accuracy": 0.9642324888226528,
+        "f1": 0.9658605974395448,
+        "tp": 679,
+        "fp": 11,
+        "tn": 615,
+        "fn": 37
+      },
+      "tuned": {
+        "threshold": 0.6504672765731812,
+        "sensitivity": 0.9329608938547486,
+        "specificity": 0.9840255591054313,
+        "precision": 0.9852507374631269,
+        "npv": 0.927710843373494,
+        "accuracy": 0.9567809239940388,
+        "f1": 0.9583931133428981,
+        "tp": 668,
+        "fp": 10,
+        "tn": 616,
+        "fn": 48
+      }
+    },
+    {
+      "arch": "efficientnet_b0",
+      "params_m": 4.01,
+      "train_seconds": 98.9,
+      "infer_ms_per_img": 5.03,
+      "val_auc": 0.9904184745016663,
+      "test_auc": 0.9889852214111053,
+      "val_spec_at_target": 0.9456140350877194,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9385474860335196,
+        "specificity": 0.9792332268370607,
+        "precision": 0.981021897810219,
+        "npv": 0.9330289193302892,
+        "accuracy": 0.9575260804769001,
+        "f1": 0.9593147751605996,
+        "tp": 672,
+        "fp": 13,
+        "tn": 613,
+        "fn": 44
+      },
+      "tuned": {
+        "threshold": 0.26454830169677734,
+        "sensitivity": 0.9539106145251397,
+        "specificity": 0.9456869009584664,
+        "precision": 0.9525801952580195,
+        "npv": 0.9472,
+        "accuracy": 0.9500745156482862,
+        "f1": 0.95324494068388,
+        "tp": 683,
+        "fp": 34,
+        "tn": 592,
+        "fn": 33
+      }
+    },
+    {
+      "arch": "mobilenet_v3_small",
+      "params_m": 1.52,
+      "train_seconds": 88.5,
+      "infer_ms_per_img": 3.34,
+      "val_auc": 0.989583726340942,
+      "test_auc": 0.9916569243400504,
+      "val_spec_at_target": 0.968421052631579,
+      "default_0_5": {
+        "threshold": 0.5,
+        "sensitivity": 0.9399441340782123,
+        "specificity": 0.9856230031948882,
+        "precision": 0.9868035190615836,
+        "npv": 0.9348484848484848,
+        "accuracy": 0.9612518628912071,
+        "f1": 0.9628040057224606,
+        "tp": 673,
+        "fp": 9,
+        "tn": 617,
+        "fn": 43
+      },
+      "tuned": {
+        "threshold": 0.3809891939163208,
+        "sensitivity": 0.9483240223463687,
+        "specificity": 0.9808306709265175,
+        "precision": 0.9826338639652678,
+        "npv": 0.9431643625192012,
+        "accuracy": 0.9634873323397913,
+        "f1": 0.9651741293532339,
+        "tp": 679,
+        "fp": 12,
+        "tn": 614,
+        "fn": 37
+      }
+    }
+  ],
+  "note": "Held-out public-dataset split; not clinical validation."
+}

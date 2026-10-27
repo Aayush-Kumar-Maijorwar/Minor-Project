@@ -1,0 +1,25 @@
+{
+  "selected": "xgboost",
+  "features": [
+    "HbA1c_level",
+    "blood_glucose_level",
+    "age",
+    "bmi",
+    "hypertension",
+    "heart_disease",
+    "gender",
+    "smoking_history"
+  ],
+  "threshold": 0.39554405212402344,
+  "target_sensitivity": 0.95,
+  "test_metrics": {
+    "sens": 0.9440188568061285,
+    "spec": 0.8678491986539668,
+    "FN": 95,
+    "FP": 2317,
+    "acc": 0.8745709828393136
+  },
+  "test_auc": 0.9777,
+  "sklearn_version": "1.9.1",
+  "note": "Public dataset; not clinical validation."
+}

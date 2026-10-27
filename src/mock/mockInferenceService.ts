@@ -1,11 +1,14 @@
-import { InferenceService, RunAnalysisOptions } from '../services/inference/InferenceService';
-import { 
-  Patient, ModalityInput, ModalityType, ModelPrediction, FusionResult, 
-  Analysis, ExplainabilityResult, ModelMetadata, RiskFlag, UncertaintyResult 
+import { InferenceService, RunAnalysisOptions, RunAnalysisInput, HealthStatus, HealthModelStatus } from '../services/inference/InferenceService';
+import {
+  Patient, ModalityInput, ModalityType, ModelPrediction, FusionResult,
+  Analysis, ExplainabilityResult, ModelMetadata, RiskFlag, UncertaintyResult, Narrative
 } from '@/types';
 import { getMockPatient, mockPatients } from './data/mockPatients';
 import { simulateModalityPredictions } from './engine/modalityModelSim';
 import { simulateLateFusion } from './engine/lateFusionSim';
+import { buildFlags } from './engine/flags';
+import { buildUncertainty } from './engine/uncertainty';
+import { buildNarrative } from './engine/narrative';
 
 // Helper to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -14,7 +17,8 @@ const MOCK_MODELS: ModelMetadata[] = [
   { id: 'model-clin-v1', name: 'Clinical Data Model', condition: 'all', inputModality: 'clinical', status: 'trained_baseline', version: 'v1.0.0', lastUpdated: '2026-09-15', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-lab-v1', name: 'Laboratory Data Model', condition: 'diabetes', inputModality: 'lab', status: 'trained_baseline', version: 'v1.0.0', lastUpdated: '2026-09-15', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-ecg-v1', name: 'ECG Biomarker Model', condition: 'hypertension', inputModality: 'ecg', status: 'tuning', version: 'v0.9.0-beta', lastUpdated: '2026-10-01', explainabilitySupport: true, integrationStatus: 'mock' },
-  { id: 'model-smear-v1', name: 'Blood Smear Analysis', condition: 'all', inputModality: 'bloodSmear', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
+  { id: 'model-smear-cell-v1', name: 'Blood Smear Cell Analysis', condition: 'malaria', inputModality: 'bloodSmearCell', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
+  { id: 'model-smear-field-v1', name: 'Blood Smear Field Analysis', condition: 'leukemia', inputModality: 'bloodSmearField', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' },
   { id: 'model-cxr-v2', name: 'CXR Pathology Model', condition: 'tuberculosis', inputModality: 'chestXray', status: 'planned', version: 'v0.1.0-alpha', lastUpdated: '2026-10-05', explainabilitySupport: true, integrationStatus: 'mock' }
 ];
 
@@ -31,6 +35,21 @@ export class MockInferenceService implements InferenceService {
   async getPatient(id: string): Promise<Patient> {
     const p = getMockPatient(id);
     if (!p) throw new Error('Patient not found');
+    return p;
+  }
+
+  async createPatient(patient: { name: string; age: number; sex: 'male' | 'female' | 'other'; mrn?: string }): Promise<Patient> {
+    const id = `PT-${generateId()}`;
+    const p: Patient = {
+      id,
+      mrn: patient.mrn || `MRN-${Math.floor(Math.random() * 900000) + 100000}`,
+      name: patient.name,
+      age: patient.age,
+      sex: patient.sex,
+      status: 'active',
+      availableModalities: []
+    };
+    mockPatients.push(p);
     return p;
   }
 
@@ -67,16 +86,28 @@ export class MockInferenceService implements InferenceService {
     return simulateLateFusion(predictions, modalitiesAvailable);
   }
 
-  async runAnalysis(patientId: string, inputs: ModalityInput[], opts?: RunAnalysisOptions): Promise<Analysis> {
+  async runAnalysis(input: RunAnalysisInput, opts?: RunAnalysisOptions): Promise<Analysis> {
+    const patientId = input.patientId;
     const patient = await this.getPatient(patientId);
-    
+
+    // Mock mode ignores file CONTENTS (it has no real models to run them through) -
+    // only whether each section was filled in drives the synthetic engine.
+    const inputs: ModalityInput[] = [
+      { type: 'clinical', status: input.clinical ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'lab', status: input.lab ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'ecg', status: input.files?.ecg ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'chestXray', status: input.files?.chestXray ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'bloodSmearCell', status: input.files?.smearCell ? 'available' : 'missing', source: 'synthetic' },
+      { type: 'bloodSmearField', status: input.files?.smearField ? 'available' : 'missing', source: 'synthetic' }
+    ];
+
     opts?.onProgress?.('preprocessing', 'Validating inputs');
     await sleep(400);
     const preprocessedInputs = await this.validateAndPreprocess(patientId, inputs);
-    
+
     opts?.onProgress?.('predicting', 'Running modality models');
     await sleep(600);
-    const predictions = simulateModalityPredictions(patientId, preprocessedInputs, patient.scenarioId);
+    const predictions = simulateModalityPredictions(patientId, preprocessedInputs, patient.scenarioId || 'healthy');
     
     opts?.onProgress?.('fusing', 'Executing late fusion');
     await sleep(400);
@@ -86,22 +117,11 @@ export class MockInferenceService implements InferenceService {
     opts?.onProgress?.('explainability', 'Generating explanations and uncertainty bounds');
     await sleep(500);
 
-    const uncertainty: UncertaintyResult = {
-      confidence: 0.85,
-      uncertaintyLevel: activeModalities.length < 3 ? 'moderate' : 'low',
-      reliability: activeModalities.length < 2 ? 'limited' : 'adequate',
-      dataCompleteness: {
-        available: activeModalities.length,
-        total: 5,
-        missing: (['bloodSmear', 'chestXray', 'ecg', 'clinical', 'lab'] as ModalityType[]).filter(m => !activeModalities.includes(m))
-      },
-      modelStatus: 'Demo Mode Simulation',
-      messages: ['Confidence reflects model agreement in Demo Mode and is not medical certainty.', 'Unavailable modalities were excluded from this fusion run.']
-    };
+    const uncertainty: UncertaintyResult = buildUncertainty(predictions, fusion);
 
     const explainability: ExplainabilityResult[] = predictions.filter(p => p.status === 'ok').map(p => {
       let kind: 'feature_importance' | 'heatmap' | 'ecg_segments' = 'feature_importance';
-      if (p.modality === 'bloodSmear' || p.modality === 'chestXray') kind = 'heatmap';
+      if (p.modality === 'bloodSmearCell' || p.modality === 'bloodSmearField' || p.modality === 'chestXray') kind = 'heatmap';
       if (p.modality === 'ecg') kind = 'ecg_segments';
 
       return {
@@ -116,29 +136,8 @@ export class MockInferenceService implements InferenceService {
     });
 
     const analysisId = fusion.analysisId;
-    const flags: RiskFlag[] = [];
-    if (fusion.overallRisk === 'high' || fusion.overallRisk === 'review_required') {
-      flags.push({
-        id: `flag-${generateId()}`,
-        patientId,
-        analysisId,
-        severity: 'review_required',
-        reason: 'High risk condition detected by fusion model. Clinical review required.',
-        createdAt: new Date().toISOString(),
-        status: 'open'
-      });
-    }
-    if (uncertainty.dataCompleteness.missing.length > 2) {
-      flags.push({
-        id: `flag-${generateId()}`,
-        patientId,
-        analysisId,
-        severity: 'incomplete_data',
-        reason: 'Multiple modalities missing. Assessment may be unreliable.',
-        createdAt: new Date().toISOString(),
-        status: 'open'
-      });
-    }
+    const flags: RiskFlag[] = buildFlags(analysisId, patientId, fusion);
+    const narrative = buildNarrative(fusion);
 
     const analysis: Analysis = {
       id: analysisId,
@@ -150,7 +149,12 @@ export class MockInferenceService implements InferenceService {
       explainability,
       uncertainty,
       flags,
-      versions: { models: { 'model-clin-v1': '1.0' }, fusion: 'v2.0' }
+      versions: { models: { 'model-clin-v1': '1.0' }, fusion: 'v2.0' },
+      narrative,
+      submittedValues: {
+        clinical: input.clinical ? { ...input.clinical } : null,
+        lab: input.lab ? { ...input.lab } : null
+      }
     };
 
     globalAnalyses.push(analysis);
@@ -172,6 +176,26 @@ export class MockInferenceService implements InferenceService {
 
   async listAnalyses(filters?: any): Promise<Analysis[]> {
     return [...globalAnalyses];
+  }
+
+  async regenerateNarrative(analysisId: string, _llm: boolean): Promise<Narrative> {
+    // Mock mode has no LLM to call - always returns the deterministic template,
+    // freshly rebuilt but not persisted, same as the real backend's contract.
+    const a = await this.getAnalysis(analysisId);
+    return buildNarrative(a.fusion);
+  }
+
+  async getHealth(): Promise<HealthStatus> {
+    const models: HealthModelStatus[] = [
+      { id: 'model-cxr-v2', modality: 'chestXray', condition: 'tuberculosis', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-smear-cell-v1', modality: 'bloodSmearCell', condition: 'malaria', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-smear-field-v1', modality: 'bloodSmearField', condition: 'leukemia', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-ecg-v1', modality: 'ecg', condition: 'hypertension', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-lab-v1', modality: 'lab', condition: 'diabetes', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-clin-diabetes-v1', modality: 'clinical', condition: 'diabetes', state: 'loaded', simulatedOrFake: true },
+      { id: 'model-clin-hypertension-v1', modality: 'clinical', condition: 'hypertension', state: 'loaded', simulatedOrFake: true }
+    ];
+    return { status: 'ok', models, versions: {}, llmEnabled: false };
   }
 
   async getExplainability(analysisId: string): Promise<ExplainabilityResult[]> {

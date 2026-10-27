@@ -12,7 +12,7 @@ export const mockPatients: Patient[] = [
     status: 'active',
     lastAnalysisAt: '2026-10-01T10:00:00Z',
     currentRisk: 'low',
-    availableModalities: ['clinical', 'lab', 'ecg', 'bloodSmear', 'chestXray']
+    availableModalities: ['clinical', 'lab', 'ecg', 'bloodSmearCell', 'bloodSmearField', 'chestXray']
   },
   {
     id: 'DEMO-0002',
@@ -60,7 +60,7 @@ export const mockPatients: Patient[] = [
     status: 'active',
     lastAnalysisAt: '2026-10-05T08:20:00Z',
     currentRisk: 'high',
-    availableModalities: ['clinical', 'bloodSmear']
+    availableModalities: ['clinical', 'bloodSmearCell']
   },
   {
     id: 'DEMO-0006',
@@ -72,7 +72,7 @@ export const mockPatients: Patient[] = [
     status: 'active',
     lastAnalysisAt: '2026-10-05T16:00:00Z',
     currentRisk: 'high',
-    availableModalities: ['clinical', 'lab', 'bloodSmear']
+    availableModalities: ['clinical', 'lab', 'bloodSmearField']
   },
   {
     id: 'DEMO-0007',

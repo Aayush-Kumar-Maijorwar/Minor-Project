@@ -1,0 +1,50 @@
+{
+  "model_id": "diabetes_combined",
+  "target": "diabetes",
+  "modality": "clinicalLab",
+  "features": [
+    "HbA1c_level",
+    "blood_glucose_level",
+    "age",
+    "bmi",
+    "hypertension",
+    "heart_disease",
+    "gender",
+    "smoking_history"
+  ],
+  "numeric": [
+    "HbA1c_level",
+    "blood_glucose_level",
+    "age",
+    "bmi",
+    "hypertension",
+    "heart_disease"
+  ],
+  "categorical": [
+    "gender",
+    "smoking_history"
+  ],
+  "reference_values": {
+    "HbA1c_level": 5.8,
+    "blood_glucose_level": 140.0,
+    "age": 43.0,
+    "bmi": 27.32,
+    "hypertension": 0.0,
+    "heart_disease": 0.0,
+    "gender": "Female",
+    "smoking_history": "never"
+  },
+  "threshold": 0.39554405212402344,
+  "test_auc": 0.9777,
+  "test_metrics": {
+    "sens": 0.9440188568061285,
+    "spec": 0.8678491986539668,
+    "FN": 95,
+    "FP": 2317,
+    "acc": 0.8745709828393136
+  },
+  "selected": "xgboost",
+  "sklearn_version": "1.9.1",
+  "source": "user-trained (train_diabetes.py)",
+  "note": "Public dataset; not clinical validation."
+}

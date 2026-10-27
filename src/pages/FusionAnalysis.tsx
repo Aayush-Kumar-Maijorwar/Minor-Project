@@ -2,6 +2,36 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Share2 } from 'lucide-react';
+import { DEMO_WEIGHTS } from '@/mock/engine/lateFusionSim';
+import { Condition, ModalityType } from '@/types';
+
+const CONDITION_LABELS: Record<Condition, string> = {
+  malaria: 'Malaria',
+  leukemia: 'Leukemia',
+  tuberculosis: 'Tuberculosis',
+  hypertension: 'Hypertension',
+  diabetes: 'Diabetes'
+};
+
+const MODALITY_LABELS: Record<ModalityType, string> = {
+  bloodSmearCell: 'Blood Smear (Cell)',
+  bloodSmearField: 'Blood Smear (Field)',
+  chestXray: 'Chest X-ray',
+  ecg: 'ECG',
+  clinical: 'Clin',
+  lab: 'Lab',
+  clinicalLab: 'Combined (Lab + Clin)'
+};
+
+const CONDITION_ORDER: Condition[] = ['malaria', 'leukemia', 'tuberculosis', 'hypertension', 'diabetes'];
+
+function formatWeights(condition: Condition): string {
+  const weights = DEMO_WEIGHTS[condition];
+  return (Object.keys(weights) as ModalityType[])
+    .filter(m => weights[m] > 0)
+    .map(m => `${MODALITY_LABELS[m]} ${Math.round(weights[m] * 100)}%`)
+    .join(', ');
+}
 
 export default function FusionAnalysis() {
   return (
@@ -31,7 +61,7 @@ export default function FusionAnalysis() {
 
                 {/* Modality Models (Left) */}
                 <g transform="translate(50, 40)">
-                  {['Blood Smear', 'Chest X-ray', 'ECG', 'Clinical', 'Lab Data'].map((m, i) => (
+                  {['Blood Smear (Cell/Field)', 'Chest X-ray', 'ECG', 'Clinical', 'Lab Data'].map((m, i) => (
                     <g key={m} transform={`translate(0, ${i * 70})`}>
                       <rect width="100" height="40" rx="4" fill="#f8fafc" stroke="#94a3b8" />
                       <text x="50" y="25" textAnchor="middle" fontSize="12" fill="#334155">{m}</text>
@@ -98,11 +128,11 @@ export default function FusionAnalysis() {
               <CardDescription>Not medically validated</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-slate-600 space-y-2">
-              <div className="flex justify-between"><span>Malaria</span> <span>Blood Smear 100%</span></div>
-              <div className="flex justify-between"><span>Leukemia</span> <span>Blood Smear 100%</span></div>
-              <div className="flex justify-between"><span>Tuberculosis</span> <span>Chest X-ray 100%</span></div>
-              <div className="flex justify-between"><span>Hypertension</span> <span>ECG 40%, Clin 40%, Lab 20%</span></div>
-              <div className="flex justify-between"><span>Diabetes</span> <span>Clin 50%, Lab 50%</span></div>
+              {CONDITION_ORDER.map(condition => (
+                <div key={condition} className="flex justify-between">
+                  <span>{CONDITION_LABELS[condition]}</span> <span>{formatWeights(condition)}</span>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>

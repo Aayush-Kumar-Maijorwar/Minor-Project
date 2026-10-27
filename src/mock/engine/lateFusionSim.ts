@@ -1,12 +1,15 @@
 import { Condition, FusionResult, FusionConditionResult, FusionContribution, ModelPrediction, ModalityType } from '@/types';
 
 
-const DEMO_WEIGHTS: Record<Condition, Record<ModalityType, number>> = {
-  diabetes: { clinical: 0.5, lab: 0.5, ecg: 0, bloodSmear: 0, chestXray: 0 },
-  hypertension: { clinical: 0.4, lab: 0.2, ecg: 0.4, bloodSmear: 0, chestXray: 0 },
-  malaria: { clinical: 0, lab: 0, ecg: 0, bloodSmear: 1.0, chestXray: 0 },
-  leukemia: { clinical: 0, lab: 0, ecg: 0, bloodSmear: 1.0, chestXray: 0 },
-  tuberculosis: { clinical: 0.2, lab: 0, ecg: 0, bloodSmear: 0, chestXray: 0.8 }
+// why: mock mode doesn't simulate the backend's "best_available" combined-model
+// strategy (that's real-data-only, see backend/app/fusion.py) - clinicalLab stays 0
+// everywhere so the synthetic engine keeps fusing lab+clinical exactly as before.
+export const DEMO_WEIGHTS: Record<Condition, Record<ModalityType, number>> = {
+  diabetes: { clinical: 0.5, lab: 0.5, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  hypertension: { clinical: 0.5, lab: 0, ecg: 0.5, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  malaria: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 1.0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  leukemia: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 1.0, chestXray: 0, clinicalLab: 0 },
+  tuberculosis: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 1.0, clinicalLab: 0 }
 };
 
 export function simulateLateFusion(
@@ -21,17 +24,14 @@ export function simulateLateFusion(
 
   for (const condition of allConditions) {
     const conditionWeights = DEMO_WEIGHTS[condition];
-    let totalAvailableWeight = 0;
-    const contributions: FusionContribution[] = [];
 
-    // Figure out which required modalities are available
-    for (const modality of Object.keys(conditionWeights) as ModalityType[]) {
-      if (conditionWeights[modality] > 0 && availableModalities.includes(modality)) {
-        totalAvailableWeight += conditionWeights[modality];
-      }
-    }
+    // A condition is only assessed if at least one 'ok' prediction with a
+    // non-zero weight actually exists for it (not merely "weight is defined").
+    const okPredictions = predictions.filter(
+      p => p.condition === condition && p.status === 'ok' && (conditionWeights[p.modality] || 0) > 0
+    );
 
-    if (totalAvailableWeight === 0) {
+    if (okPredictions.length === 0) {
       perCondition.push({
         condition,
         fusedScore: 0,
@@ -41,21 +41,26 @@ export function simulateLateFusion(
       continue;
     }
 
-    let fusedScore = 0;
+    const totalAvailableWeight = okPredictions.reduce((sum, pred) => sum + conditionWeights[pred.modality], 0);
 
-    for (const pred of predictions.filter(p => p.condition === condition && p.status === 'ok')) {
-      const originalWeight = conditionWeights[pred.modality] || 0;
-      if (originalWeight > 0) {
-        // Re-normalize weight based on available inputs
-        const normalizedWeight = originalWeight / totalAvailableWeight;
-        fusedScore += pred.score * normalizedWeight;
-        contributions.push({
-          modality: pred.modality,
-          modelId: pred.modelId,
-          weight: normalizedWeight,
-          score: pred.score
-        });
-      }
+    let fusedScore = 0;
+    const contributions: FusionContribution[] = [];
+
+    for (const pred of okPredictions) {
+      const originalWeight = conditionWeights[pred.modality];
+      // Re-normalize weight based on available inputs
+      const normalizedWeight = originalWeight / totalAvailableWeight;
+      fusedScore += pred.score * normalizedWeight;
+      contributions.push({
+        modality: pred.modality,
+        modelId: pred.modelId,
+        weight: normalizedWeight,
+        score: pred.score,
+        // Mock mode has no real per-model decision threshold - 0.65 mirrors the same
+        // 'high' cutoff this engine uses below, just so result-screen gauges have
+        // something sensible to render against in demo mode.
+        threshold: 0.65
+      });
     }
 
     let riskLevel: 'low' | 'moderate' | 'high' | 'not_assessed' = 'low';
@@ -75,18 +80,25 @@ export function simulateLateFusion(
     }
   }
 
-  let overallRisk: 'low' | 'moderate' | 'high' | 'incomplete_data' | 'review_required' = 'low';
-  if (highestRiskScore > 0.65) overallRisk = 'high';
-  else if (highestRiskScore > 0.35) overallRisk = 'moderate';
+  const assessedConditions = perCondition.filter(c => c.riskLevel !== 'not_assessed').map(c => c.condition);
+  const notAssessedConditions = allConditions.filter(c => !assessedConditions.includes(c));
 
-  // If very few modalities are available, flag as incomplete
-  if (availableModalities.length < 2) {
+  let overallRisk: 'low' | 'moderate' | 'high' | 'incomplete_data' | 'review_required';
+  if (assessedConditions.length === 0) {
+    // No condition could be assessed at all - missing data must never be
+    // reported as a real (low) risk level.
     overallRisk = 'incomplete_data';
   } else if (highestRiskScore > 0.8) {
     overallRisk = 'review_required';
+  } else if (highestRiskScore > 0.65) {
+    overallRisk = 'high';
+  } else if (highestRiskScore > 0.35) {
+    overallRisk = 'moderate';
+  } else {
+    overallRisk = 'low';
   }
 
-  const allTypes: ModalityType[] = ['bloodSmear', 'chestXray', 'ecg', 'clinical', 'lab'];
+  const allTypes: ModalityType[] = ['bloodSmearCell', 'bloodSmearField', 'chestXray', 'ecg', 'clinical', 'lab'];
   const excluded = allTypes.filter(t => !availableModalities.includes(t));
 
   return {
@@ -96,8 +108,10 @@ export function simulateLateFusion(
     dominantCondition,
     modalitiesUsed: availableModalities,
     modalitiesExcluded: excluded,
+    assessedConditions,
+    notAssessedConditions,
     fusionVersion: 'v2.0-late-fusion-demo',
     simulated: true,
-    note: 'Demo weights applied. Unavailable modalities were excluded from this fusion run.'
+    note: `Demo weights applied. ${assessedConditions.length} of ${allConditions.length} conditions assessed; unavailable modalities excluded those conditions from this fusion run.`
   };
 }

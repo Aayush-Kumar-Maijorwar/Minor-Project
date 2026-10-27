@@ -1,0 +1,34 @@
+{
+  "diabetes": {
+    "strategy": "best_available",
+    "components": [
+      { "modality": "lab", "weight": 0.5 },
+      { "modality": "clinical", "weight": 0.5 }
+    ],
+    "fused_threshold": 0.5,
+    "weights_source": "default 0.5/0.5 (overridden by artifacts/tabular/diabetes_fusion.json if present)"
+  },
+  "hypertension": {
+    "components": [
+      { "modality": "clinical", "weight": 0.75 },
+      { "modality": "ecg", "weight": 0.25 }
+    ],
+    "fused_threshold": 0.5,
+    "weights_source": "hand-set; the ECG model is a cardiac-abnormality proxy, not hypertension-specific"
+  },
+  "tuberculosis": {
+    "components": [{ "modality": "chestXray", "weight": 1.0 }],
+    "fused_threshold": 0.5,
+    "weights_source": "single model"
+  },
+  "malaria": {
+    "components": [{ "modality": "bloodSmearCell", "weight": 1.0 }],
+    "fused_threshold": 0.5,
+    "weights_source": "single model"
+  },
+  "leukemia": {
+    "components": [{ "modality": "bloodSmearField", "weight": 1.0 }],
+    "fused_threshold": 0.5,
+    "weights_source": "single model"
+  }
+}

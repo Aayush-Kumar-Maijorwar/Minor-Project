@@ -1,0 +1,28 @@
+{
+  "components": [
+    {
+      "model_id": "diabetes_lab",
+      "weight": 0.6
+    },
+    {
+      "model_id": "diabetes_clinical",
+      "weight": 0.4
+    }
+  ],
+  "fused_threshold": 0.5637,
+  "test_auc": 0.978529993782433,
+  "tuned": {
+    "threshold": 0.563691495189021,
+    "sensitivity": 0.9520440251572327,
+    "specificity": 0.8619771863117871,
+    "precision": 0.40019828155981496,
+    "accuracy": 0.8699209540979059,
+    "f1": 0.5635179153094463,
+    "tp": 1211,
+    "fp": 1815,
+    "tn": 11335,
+    "fn": 61
+  },
+  "weights_source": "fitted on validation data (grid search, norm_score fusion - same mapping as backend/app/fusion.py)",
+  "note": "Held-out public-dataset split; not clinical validation."
+}

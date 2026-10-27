@@ -60,7 +60,7 @@ export default function History() {
                         {a.fusion.dominantCondition || 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {a.fusion.modalitiesUsed.length} / 5
+                        {a.fusion.modalitiesUsed.length} / 6
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         {a.fusion.fusionVersion}
