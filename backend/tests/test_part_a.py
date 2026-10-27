@@ -58,7 +58,7 @@ def test_models_include_comparison_and_fusion_urls_and_fake_flag(client):
     resp = client.get("/models")
     assert resp.status_code == 200
     models = resp.json()
-    assert len(models) == 7
+    assert len(models) == 8
 
     for m in models:
         assert m["fake"] is True  # fixture uses fake artifacts throughout

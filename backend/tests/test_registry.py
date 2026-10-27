@@ -35,7 +35,7 @@ def test_app_starts_with_zero_artifacts(tmp_path):
     empty = tmp_path / "empty"
     empty.mkdir()
     registry = Registry(empty, BACKEND_DIR / "config")
-    assert len(registry.slots) == 7  # tb, malaria, leukemia, ecg, diabetes_lab, diabetes_clinical, hypertension_clinical
+    assert len(registry.slots) == 8  # tb, malaria, leukemia, ecg, diabetes_lab, diabetes_clinical, hypertension_clinical, diabetes_combined
     for slot in registry.slots.values():
         assert slot.state in ("missing", "error")
         assert slot.reason
