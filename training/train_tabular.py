@@ -151,12 +151,81 @@ def run_task(name, df, out, target_sens, seed=42):
         plt.figure(figsize=(6, 4)); imp.plot.barh(); plt.title(f"{name}: feature importance ({best})")
         plt.tight_layout(); plt.savefig(os.path.join(out, f"{name}_importance.png"), dpi=150); plt.close()
 
+# --- late-fusion weight fitting for diabetes_lab + diabetes_clinical -----------
+def norm_score(p, t):
+    """Maps a model's own flag threshold t to 0.5 on a shared 0..1 scale - IDENTICAL
+    formula to backend/app/fusion.py's norm_score(), so fitted weights mean the same
+    thing here as they do when the backend actually fuses live predictions."""
+    t = min(max(t, 1e-6), 1 - 1e-6)
+    return 0.5 * p / t if p < t else 0.5 + 0.5 * (p - t) / (1 - t)
+
+def fuse_diabetes(df, out, target_sens, seed=42):
+    """Fits late-fusion weights for diabetes_lab + diabetes_clinical. Reuses the exact
+    same 70/15/15 split (same df, target column, seed) run_task() used for those two
+    tasks, so this reloads their already-saved joblib/comparison.json rather than
+    retraining anything. Weight search + threshold tuning happen on VALIDATION only;
+    test stays an honest final report. Writes out/diabetes_fusion.json in the shape
+    the backend registry expects (components + fused_threshold)."""
+    lab_meta = json.load(open(os.path.join(out, "diabetes_lab_comparison.json")))
+    clin_meta = json.load(open(os.path.join(out, "diabetes_clinical_comparison.json")))
+    lab_pipe = joblib.load(os.path.join(out, "diabetes_lab_best.joblib"))
+    clin_pipe = joblib.load(os.path.join(out, "diabetes_clinical_best.joblib"))
+
+    y = df["diabetes"].astype(int)
+    X_tr, X_tmp, y_tr, y_tmp = train_test_split(df, y, test_size=0.30, stratify=y, random_state=seed)
+    X_va, X_te, y_va, y_te = train_test_split(X_tmp, y_tmp, test_size=0.50, stratify=y_tmp, random_state=seed)
+
+    p_lab_va = lab_pipe.predict_proba(X_va[lab_meta["features"]])[:, 1]
+    p_clin_va = clin_pipe.predict_proba(X_va[clin_meta["features"]])[:, 1]
+    p_lab_te = lab_pipe.predict_proba(X_te[lab_meta["features"]])[:, 1]
+    p_clin_te = clin_pipe.predict_proba(X_te[clin_meta["features"]])[:, 1]
+
+    t_lab, t_clin = lab_meta["threshold"], clin_meta["threshold"]
+    ns_lab_va = np.array([norm_score(p, t_lab) for p in p_lab_va])
+    ns_clin_va = np.array([norm_score(p, t_clin) for p in p_clin_va])
+    ns_lab_te = np.array([norm_score(p, t_lab) for p in p_lab_te])
+    ns_clin_te = np.array([norm_score(p, t_clin) for p in p_clin_te])
+
+    # why: grid search over the fusion weight, same selection rule as everywhere else
+    # in this codebase - best specificity at the target sensitivity, chosen on VAL only
+    best = None
+    for w_lab in np.linspace(0.0, 1.0, 21):
+        fused_va = w_lab * ns_lab_va + (1 - w_lab) * ns_clin_va
+        thr = tune_threshold(y_va, fused_va, target_sens)
+        spec = metrics_at(y_va, fused_va, thr)["specificity"]
+        key = (spec, roc_auc_score(y_va, fused_va))
+        if best is None or key > best[0]:
+            best = (key, float(w_lab), float(thr))
+    _, w_lab, fused_threshold = best
+    w_clin = 1 - w_lab
+
+    fused_te = w_lab * ns_lab_te + w_clin * ns_clin_te
+    test_auc = float(roc_auc_score(y_te, fused_te))
+    tuned = metrics_at(y_te, fused_te, fused_threshold)
+
+    fusion = dict(
+        components=[
+            dict(model_id="diabetes_lab", weight=round(w_lab, 3)),
+            dict(model_id="diabetes_clinical", weight=round(w_clin, 3)),
+        ],
+        fused_threshold=round(fused_threshold, 4),
+        test_auc=test_auc,
+        tuned=tuned,
+        weights_source="fitted on validation data (grid search, norm_score fusion - same mapping as backend/app/fusion.py)",
+        note="Held-out public-dataset split; not clinical validation.",
+    )
+    with open(os.path.join(out, "diabetes_fusion.json"), "w") as f:
+        json.dump(fusion, f, indent=2)
+    print(f"\n##### diabetes fusion: w_lab={w_lab:.2f} w_clinical={w_clin:.2f} fused_threshold={fused_threshold:.3f}")
+    print(f"  TEST fused auc={test_auc:.4f} sens={tuned['sensitivity']:.3f} spec={tuned['specificity']:.3f} FN={tuned['fn']}")
+    return fusion
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default=None)
     ap.add_argument("--out", default="/kaggle/working/medfusion/tabular" if os.path.exists("/kaggle") else "./medfusion_out/tabular")
     ap.add_argument("--target_sens", type=float, default=0.95)
-    ap.add_argument("--tasks", nargs="+", default=list(TASKS), choices=list(TASKS))
+    ap.add_argument("--tasks", "--models", nargs="+", default=list(TASKS), choices=list(TASKS), dest="tasks")
     a = ap.parse_args()
     df = pd.read_csv(find_csv(a.csv))
     n0 = len(df)
@@ -164,6 +233,8 @@ def main():
     print(f"Rows: {n0} -> {len(df)} after dropping exact duplicates")
     for t in a.tasks:
         run_task(t, df, a.out, a.target_sens)
+    if "diabetes_lab" in a.tasks and "diabetes_clinical" in a.tasks:
+        fuse_diabetes(df, a.out, a.target_sens)
     print(f"\nSaved to {a.out}")
 
 if __name__ == "__main__":
