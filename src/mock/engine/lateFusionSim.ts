@@ -1,12 +1,15 @@
 import { Condition, FusionResult, FusionConditionResult, FusionContribution, ModelPrediction, ModalityType } from '@/types';
 
 
+// why: mock mode doesn't simulate the backend's "best_available" combined-model
+// strategy (that's real-data-only, see backend/app/fusion.py) - clinicalLab stays 0
+// everywhere so the synthetic engine keeps fusing lab+clinical exactly as before.
 export const DEMO_WEIGHTS: Record<Condition, Record<ModalityType, number>> = {
-  diabetes: { clinical: 0.5, lab: 0.5, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0 },
-  hypertension: { clinical: 0.5, lab: 0, ecg: 0.5, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0 },
-  malaria: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 1.0, bloodSmearField: 0, chestXray: 0 },
-  leukemia: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 1.0, chestXray: 0 },
-  tuberculosis: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 1.0 }
+  diabetes: { clinical: 0.5, lab: 0.5, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  hypertension: { clinical: 0.5, lab: 0, ecg: 0.5, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  malaria: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 1.0, bloodSmearField: 0, chestXray: 0, clinicalLab: 0 },
+  leukemia: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 1.0, chestXray: 0, clinicalLab: 0 },
+  tuberculosis: { clinical: 0, lab: 0, ecg: 0, bloodSmearCell: 0, bloodSmearField: 0, chestXray: 1.0, clinicalLab: 0 }
 };
 
 export function simulateLateFusion(

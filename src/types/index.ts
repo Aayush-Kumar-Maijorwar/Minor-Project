@@ -1,4 +1,4 @@
-export type ModalityType = 'bloodSmearCell' | 'bloodSmearField' | 'chestXray' | 'ecg' | 'clinical' | 'lab';
+export type ModalityType = 'bloodSmearCell' | 'bloodSmearField' | 'chestXray' | 'ecg' | 'clinical' | 'lab' | 'clinicalLab';
 export type ModalityStatus = 'available' | 'missing' | 'not_required' | 'pending';
 export type Condition = 'diabetes' | 'hypertension' | 'malaria' | 'leukemia' | 'tuberculosis';
 
@@ -75,6 +75,12 @@ export interface FusionConditionResult {
   fusedScore: number;
   contributions: FusionContribution[];
   riskLevel: 'low' | 'moderate' | 'high' | 'not_assessed';
+  /** diabetes only: which "best_available" strategy produced this verdict. */
+  strategyUsed?: 'combined' | 'fusion' | 'lab_only' | 'clinical_only';
+  /** diabetes only: model ids that ran but were excluded to avoid double-counting
+   * against the combined model (e.g. diabetes_lab/diabetes_clinical when the
+   * combined model's inputs were all present). */
+  notUsedModelIds?: string[];
 }
 
 export interface FusionResult {

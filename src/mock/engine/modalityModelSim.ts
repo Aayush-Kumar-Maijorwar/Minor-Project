@@ -8,7 +8,10 @@ export const MODELS: Record<ModalityType, { id: string; name: string; targets: C
   chestXray: { id: 'model-cxr-v2', name: 'CXR Pathology Model', targets: ['tuberculosis'] },
   ecg: { id: 'model-ecg-v1', name: 'ECG Biomarker Model', targets: ['hypertension'] },
   clinical: { id: 'model-clin-v1', name: 'Clinical Data Model', targets: ['diabetes', 'hypertension'] },
-  lab: { id: 'model-lab-v1', name: 'Laboratory Data Model', targets: ['diabetes'] }
+  lab: { id: 'model-lab-v1', name: 'Laboratory Data Model', targets: ['diabetes'] },
+  // Mock mode has no combined-model simulation (see lateFusionSim.ts's DEMO_WEIGHTS) -
+  // targets is empty so this entry never actually fires in simulateModalityPredictions.
+  clinicalLab: { id: 'model-combined-v1', name: 'Combined Lab + Clinical Model', targets: [] }
 };
 
 export function simulateModalityPredictions(patientId: string, inputs: ModalityInput[], scenarioId: string): ModelPrediction[] {

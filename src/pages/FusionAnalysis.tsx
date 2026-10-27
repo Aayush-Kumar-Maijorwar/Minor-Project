@@ -19,7 +19,8 @@ const MODALITY_LABELS: Record<ModalityType, string> = {
   chestXray: 'Chest X-ray',
   ecg: 'ECG',
   clinical: 'Clin',
-  lab: 'Lab'
+  lab: 'Lab',
+  clinicalLab: 'Combined (Lab + Clin)'
 };
 
 const CONDITION_ORDER: Condition[] = ['malaria', 'leukemia', 'tuberculosis', 'hypertension', 'diabetes'];
