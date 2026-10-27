@@ -31,7 +31,7 @@ from .store import Store
 ALL_MODALITIES = fusion_mod.ALL_MODALITIES
 
 settings = get_settings()
-registry = Registry(settings.artifacts_dir, Path(__file__).resolve().parent.parent / "config")
+registry = Registry(settings.artifacts_dir, Path(__file__).resolve().parent.parent / "config", settings.min_test_auc)
 store = Store(settings.data_dir / "store.json")
 
 app = FastAPI(title="MedFusion backend")

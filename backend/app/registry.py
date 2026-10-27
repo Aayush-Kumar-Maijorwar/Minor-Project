@@ -46,13 +46,15 @@ class ModelSlot:
 
 
 class Registry:
-    def __init__(self, artifacts_dir: Path, config_dir: Path):
+    def __init__(self, artifacts_dir: Path, config_dir: Path, min_test_auc: float = 0.65):
         self.artifacts_dir = Path(artifacts_dir)
+        self.min_test_auc = min_test_auc
         self.fusion_config = self._load_fusion_config(Path(config_dir))
         self.slots: dict[str, ModelSlot] = {}
         self._load_image_slots()
         self._load_ecg_slot()
         self._load_tabular_slots()
+        self._apply_quality_gate()
 
     # ---- loading -----------------------------------------------------
     @staticmethod
@@ -137,6 +139,20 @@ class Registry:
                 except Exception as e:
                     slot.state, slot.reason = "error", str(e)
             self.slots[slot_id] = slot
+
+    def _apply_quality_gate(self):
+        """A model that loaded fine can still be refused for inference: below the
+        configured test_auc bar, it is downgraded to state='error' with reason
+        'below quality gate' - the file exists, but it never predicts (safety rule:
+        never feed real patients through a model with no demonstrated signal)."""
+        for slot in self.slots.values():
+            if slot.state != "loaded":
+                continue
+            test_auc = self._test_auc(slot)
+            if test_auc is not None and test_auc < self.min_test_auc:
+                slot.predictor = None
+                slot.state = "error"
+                slot.reason = f"below quality gate (test_auc={test_auc:.3f} < {self.min_test_auc})"
 
     # ---- inference -----------------------------------------------------
     @staticmethod

@@ -17,6 +17,9 @@ class Settings:
         origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
         self.cors_origins: list[str] = [o.strip() for o in origins.split(",") if o.strip()]
         self.data_dir: Path = BACKEND_DIR / "data"
+        # Quality gate: a model is refused (state='error', reason 'below quality gate')
+        # if its own reported test_auc is below this, even though the file loads fine.
+        self.min_test_auc: float = float(os.getenv("MIN_TEST_AUC", "0.65"))
 
     @property
     def llm_enabled(self) -> bool:
